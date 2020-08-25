@@ -67,3 +67,7 @@ RUN echo                                                                        
     wineboot -u                                                                                                                                     && \
     sleep 20                                                                                                                                        && \
     echo DONE
+
+ADD . /artos
+RUN /artos/meson.sh
+
