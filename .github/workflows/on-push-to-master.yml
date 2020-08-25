@@ -21,6 +21,6 @@ jobs:
         username: $GITHUB_ACTOR
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag artos-build:latest
+      run: docker build -t docker.pkg.github.com/armkit/artos/artos:latest .
     - name: Publish docker build image
-      run: docker push docker.pkg.github.com/armkit/artos/artos-build:latest
+      run: docker push docker.pkg.github.com/armkit/artos/artos:latest
