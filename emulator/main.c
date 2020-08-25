@@ -37,6 +37,7 @@ void start_program() {
   setvbuf(stdout, NULL, _IONBF, 0);
 
   printf("\n");
+
   printf("Starting ARTOS emulator...\n");
 
   GetTempPathA(sizeof(TempDirPath)-1, TempDirPath);
@@ -46,10 +47,20 @@ void start_program() {
   _chdir("TempARTOS");
 
   _getcwd(CWDPath, sizeof(CWDPath));
-  printf("Temp Directory: %s\n", CWDPath);
+  printf("Tempdir: %s\n", CWDPath);
+
+  printf("\n");
 }
 
 void close_program(int code) {
+  HMODULE hntdll;
+  hntdll = GetModuleHandle("ntdll.dll");
+  if (hntdll) {
+    if (GetProcAddress(hntdll, "wine_get_version") == NULL) {
+      printf("\n");
+      system("pause");
+    }
+  }
   exit(code);
 }
 
@@ -202,12 +213,21 @@ void extract_qemu() {
   printf("[DONE]\n");
 }
 
+void qemu_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired) {
+  HANDLE hProcess;
+  DWORD  ExitCode;
+  hProcess = *((PHANDLE) lpParameter);
+  GetExitCodeProcess(hProcess, &ExitCode);
+  close_program(ExitCode);
+}
+
 void exec_qemu() {
   SECURITY_ATTRIBUTES saAttr = {0};
   PROCESS_INFORMATION processInfo = {0};
   STARTUPINFO info = {0};
   CHAR chBuf[100], chCmd[100];
   HANDLE hPipeRd, hPipeWr;
+  HANDLE hWaitObject;
   DWORD dwRead;
   BOOL bSuccess = FALSE;
   BOOL bDone    = FALSE;
@@ -242,6 +262,13 @@ void exec_qemu() {
     close_program(1);
   }
 
+  RegisterWaitForSingleObject(&hWaitObject,
+                              processInfo.hProcess,
+                              qemu_callback,
+                              &processInfo.hProcess,
+                              INFINITE,
+                              WT_EXECUTEONLYONCE);
+
   printf("Booting up UEFI...                                      ");
 
   bBooted  = FALSE;
@@ -254,7 +281,6 @@ void exec_qemu() {
 
   while (bDone == FALSE) {
     bSuccess = ReadFile(hPipeRd, chBuf, sizeof(chBuf), &dwRead, NULL);
-
     if (!bSuccess || dwRead == 0) {
       bDone = TRUE;
     } else {
@@ -278,7 +304,6 @@ void exec_qemu() {
             }
           }
         }
-
         if (bBooted == FALSE) {
           if (boot_pattern[k] == '\0') {
             if (chBuf[i] == '\n') {

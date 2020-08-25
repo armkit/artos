@@ -13,8 +13,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle,
   /* print splash */
   Print(L"Hello world!\n");
 
-  /* inf wait */
-  while (1);
+  /* Power State Coordination Interface: SYSTEM SHUTDOWN */
+  __asm__("LDR W0, =0x84000008");
+  __asm__("HVC #0");
 
   /* program should never reach here */
   return EFI_SUCCESS;
