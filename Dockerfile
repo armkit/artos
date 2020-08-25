@@ -65,7 +65,7 @@ RUN apt-get install -y qemu-system                                              
 RUN apt-get install -y wine                                                                                                                         && \
     apt-get install -y wine32                                                                                                                       && \
     wineboot -u                                                                                                                                     && \
-    wineboot -s
+    sleep 20
 
 ADD . /artos
 
