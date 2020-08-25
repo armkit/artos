@@ -2,23 +2,22 @@
 
 set -e
 
-export WINEDLLOVERRIDES="mscoree,mshtml="
+cd "$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 
-DIR="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
-cd $DIR
 rm -rf build
-
-for machine in `ls machines`
+for board in `ls boards`
 do
-  if [ "$machine" = "rasp" ]
+  if [ -f boards/$board/config.ini ]
   then
-    continue
+    echo "\033[36;1m"
+    echo "================================================================="
+    echo "                  Building for board: $board"
+    echo "                         ./build/$board"
+    echo "================================================================="
+    echo "\033[0m"
+    meson build/$board --cross-file boards/$board/config.ini
+    ninja -C build/$board | cat
+    wine build/$board/*.exe
   fi
-  meson setup --cross-file machines/$machine/system.ini build/$machine/system system
-  meson setup --cross-file machines/$machine/emulator.ini build/$machine/emulator emulator
-  ninja -C build/$machine/system   | cat
-  ninja -C build/$machine/emulator | cat
-  cp build/$machine/system/*.efi build/$machine
-  cp build/$machine/emulator/*.exe build/$machine
-  wine build/$machine/*.exe | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g"
 done
+echo ""

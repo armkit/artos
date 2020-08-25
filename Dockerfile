@@ -49,6 +49,7 @@ RUN echo                                                                        
     apt-get install -y git                                                                                                                          && \
     apt-get install -y nano                                                                                                                         && \
     apt-get install -y vim                                                                                                                          && \
+    apt-get install -y hexedit                                                                                                                      && \
     apt-get install -y qemu-system                                                                                                                  && \
     apt-get install -y wine                                                                                                                         && \
     apt-get install -y wine32                                                                                                                       && \
