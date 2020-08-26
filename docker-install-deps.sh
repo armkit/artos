@@ -3,11 +3,11 @@
 set -e
 
 cd /
-
+date
 dpkg --add-architecture i386
 dpkg --add-architecture arm64
 
-apt-get -y update
+apt-get -y update 
 
 apt-get install -y wget
 apt-get install -y software-properties-common

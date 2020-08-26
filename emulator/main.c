@@ -22,7 +22,7 @@ char *boot_pattern = "BdsDxe: starting";
 char *qemu_cmd = "qemu\\qemu-system-aarch64.exe "
                  "-M virt "
                  "-cpu cortex-a57 "
-                 "-m 128M "
+                 "-m 1G "
                  "-display none "
                  "-serial stdio "
                  "-bios firmware\\uefi_code.fd "
