@@ -16,7 +16,7 @@ do
     echo "================================================================="
     echo "\033[0m"
     meson build/$board --cross-file boards/$board/config.ini
-    ninja -C build/$board | cat
+    ninja -C build/$board
     wine build/$board/*.exe
   fi
 done
