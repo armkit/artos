@@ -2,7 +2,7 @@
 
 set -e
 
-cd "$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
+cd /artos
 
 rm -rf build
 for board in `ls boards`
@@ -17,7 +17,7 @@ do
     echo "\033[0m"
     meson build/$board --cross-file boards/$board/config.ini
     ninja -C build/$board
-    wine build/$board/*.exe
+    wine64 build/$board/*.exe 2> /dev/null
   fi
 done
 echo ""

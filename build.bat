@@ -1,3 +1,3 @@
 @echo off
 echo.
-docker build -t artos:latest .
+docker build --build-arg RANDOM=%RANDOM% -t artos:latest .
