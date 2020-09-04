@@ -12,21 +12,21 @@ UINTN bootMemMapKey;
 
 /* List of EFI memory types (for printing). */
 static const unsigned short *bootEFIMemTypes[] = {
-  L"RESV ",  /* EfiReservedMemoryType      */
-  L"LOADC",  /* EfiLoaderCode              */
-  L"LOADD",  /* EfiLoaderData              */
-  L"BOOTC",  /* EfiBootServicesCode        */
-  L"BOOTD",  /* EfiBootServicesData        */
-  L"RUNC ",  /* EfiRuntimeServicesCode     */
-  L"RUND ",  /* EfiRuntimeServicesData     */
-  L"CONV ",  /* EfiConventionalMemory      */
-  L"UNUSE",  /* EfiUnusableMemory          */
-  L"ACPIR",  /* EfiACPIReclaimMemory       */
-  L"ACPI ",  /* EfiACPIMemoryNVS           */
-  L"MAPIO",  /* EfiMemoryMappedIO          */
-  L"MAPP ",  /* EfiMemoryMappedIOPortSpace */
-  L"PAL  ",  /* EfiPalCode                 */
-  L"FLASH",  /* EfiPersistentMemory        */
+  L"RESERVED",  /* EfiReservedMemoryType      */
+  L"LOADCODE",  /* EfiLoaderCode              */
+  L"LOADDATA",  /* EfiLoaderData              */
+  L"BOOTCODE",  /* EfiBootServicesCode        */
+  L"BOOTDATA",  /* EfiBootServicesData        */
+  L"RUNTCODE",  /* EfiRuntimeServicesCode     */
+  L"RUNTDATA",  /* EfiRuntimeServicesData     */
+  L"RAMSPACE",  /* EfiConventionalMemory      */
+  L"UNUSABLE",  /* EfiUnusableMemory          */
+  L"ACPIRECL",  /* EfiACPIReclaimMemory       */
+  L"ACPIMEMR",  /* EfiACPIMemoryNVS           */
+  L"MEMMAPIO",  /* EfiMemoryMappedIO          */
+  L"MEMMAPPS",  /* EfiMemoryMappedIOPortSpace */
+  L"PALSPACE",  /* EfiPalCode                 */
+  L"FLASHMEM",  /* EfiPersistentMemory        */
 };
 
 /* bootGetMemMap function */
@@ -94,9 +94,11 @@ void bootGetMemMap(void)
   }
 
   /* Print good-looking header for the table. */
-  Print(L"-------------------------------------------------------\n");
-  Print(L"   TYPE         START          END           ATTR      \n");
-  Print(L"-------------------------------------------------------\n");
+  Print(L"----------------------------------------------------------\n");
+  Print(L"                SYSTEM MEMORY MAP TABLE                   \n");
+  Print(L"----------------------------------------------------------\n");
+  Print(L"     TYPE          START          END            ATTR     \n");
+  Print(L"----------------------------------------------------------\n");
 
   /* Loop over memory map entries. */
   for(i = 0; i < (mapSize/descriptorSize); i++)
@@ -128,7 +130,8 @@ void bootGetMemMap(void)
     memoryMap = (EFI_MEMORY_DESCRIPTOR*)(((char*)memoryMap)+descriptorSize);
   }
 
-  /* Print extra empty line. */
+  /* Print table footer. */
+  Print(L"----------------------------------------------------------\n");
   Print(L"\n");
 
   /* Store memory map key in data section. */
