@@ -9,7 +9,15 @@ basename += '-'
 basename += host_machine.system()
 
 # sources
-sources=['boot/main.c']
+sources=['boot/main.c',
+         'boot/init.c',
+         'boot/splash.c',
+         'boot/memmap.c',
+         'boot/exit.c',
+         'kernel/kernel.c',
+         'kernel/serial.c',
+         'kernel/debug.c',
+         'kernel/power.c']
 
 # create operating system image as an ELF library
 lib = library(basename, sources, name_prefix: '', name_suffix: 'so')
