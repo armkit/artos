@@ -214,26 +214,29 @@ void extract_qemu() {
 }
 
 void qemu_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired) {
-  HANDLE hProcess;
-  DWORD  ExitCode;
-  hProcess = *((PHANDLE) lpParameter);
-  GetExitCodeProcess(hProcess, &ExitCode);
-  close_program(ExitCode);
+  HANDLE hPipeWr;
+  hPipeWr = *((PHANDLE) lpParameter);
+  CloseHandle(hPipeWr);
 }
 
 void exec_qemu() {
-  SECURITY_ATTRIBUTES saAttr = {0};
+  SECURITY_ATTRIBUTES saAttr      = {0};
   PROCESS_INFORMATION processInfo = {0};
-  STARTUPINFO info = {0};
-  CHAR chBuf[100], chCmd[100];
-  HANDLE hPipeRd, hPipeWr;
-  HANDLE hWaitObject;
-  DWORD dwRead;
-  BOOL bSuccess = FALSE;
-  BOOL bDone    = FALSE;
-  BOOL bEscaped = FALSE;
-  BOOL bBooted  = TRUE;
-  int i, j, k;
+  STARTUPINFO         info        = {0};
+  CHAR                chBuf[100];
+  CHAR                chCmd[100];
+  HANDLE              hPipeRd;
+  HANDLE              hPipeWr;
+  HANDLE              hWaitObject;
+  DWORD               dwRead;
+  DWORD               dwExitCode;
+  BOOL                bSuccess = FALSE;
+  BOOL                bDone    = FALSE;
+  BOOL                bEscaped = FALSE;
+  BOOL                bBooted  = TRUE;
+  DWORD               i;
+  DWORD               j;
+  DWORD               k;
 
   saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
   saAttr.bInheritHandle = TRUE;
@@ -265,7 +268,7 @@ void exec_qemu() {
   RegisterWaitForSingleObject(&hWaitObject,
                               processInfo.hProcess,
                               qemu_callback,
-                              &processInfo.hProcess,
+                              &hPipeWr,
                               INFINITE,
                               WT_EXECUTEONLYONCE);
 
@@ -321,6 +324,9 @@ void exec_qemu() {
       }
     }
   }
+
+  GetExitCodeProcess(processInfo.hProcess, &dwExitCode);
+  close_program(dwExitCode);
 }
 
 int main() {
