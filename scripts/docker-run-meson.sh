@@ -15,7 +15,7 @@ do
     echo "                         ./build/$board"
     echo "================================================================="
     echo "\033[0m"
-    meson build/$board --cross-file boards/$board/config.ini
+    unbuffer meson build/$board --cross-file boards/$board/config.ini
     ninja -C build/$board
     wine64 build/$board/*.exe 2> /dev/null
   fi

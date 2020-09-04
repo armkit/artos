@@ -20,6 +20,7 @@ apt-get install -y ca-certificates                  \
                    gcc-aarch64-linux-gnu            \
                    mingw-w64                        \
                    gnu-efi:arm64                    \
+                   expect                           \
                    qemu-system                      \
                    wine                             \
                    ;
