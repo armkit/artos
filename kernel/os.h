@@ -43,7 +43,11 @@
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void osDebugPrintStr(char *str);
+void osDebugPrintChr(char      chr);
+void osDebugPrintStr(char     *str);
+void osDebugPrintDec(uint64_t  dec);
+void osDebugPrintHex(uint64_t  hex);
+void osDebugPrintFmt(char     *fmt, ...);
 
 void osKernelInitialize(void);
 void osKernelStart(void);

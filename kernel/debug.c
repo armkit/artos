@@ -34,15 +34,121 @@
 #include "kernel/os_priv.h"
 
 /*****************************************************************************
+ *                           osDebugPrintChr()
+ ****************************************************************************/
+
+void osDebugPrintChr(char chr)
+{
+  /* Print character using kernel's internal ARM UART driver. */
+  osCpuSerialOut(chr);
+}
+
+/*****************************************************************************
  *                           osDebugPrintStr()
  ****************************************************************************/
 
 void osDebugPrintStr(char *str)
 {
-  /* loop over str */
+  /* Loop over str and print each character. */
   while (*str)
   {
-    /* Print character using kernel's internal ARM UART driver. */
-    osCpuSerialOut(*str++);
+    osDebugPrintChr(*str++);
+  }
+}
+
+/*****************************************************************************
+ *                          osDebugPrintDec()
+ ****************************************************************************/
+
+void osDebugPrintDec(uint64_t dec)
+{
+  /* Check which range dec is within. */
+  if (dec < 10)
+  {
+    /* Just print dec (base case). */
+    osDebugPrintChr('0' + dec);
+  }
+  else
+  {
+    /* Recursively print the remaining part. */
+    osDebugPrintDec(dec/10);
+    /* Print the first digit. */
+    osDebugPrintDec(dec%10);
+  }
+}
+
+/*****************************************************************************
+ *                          osDebugPrintHex()
+ ****************************************************************************/
+
+void osDebugPrintHex(uint64_t hex)
+{
+  /* Local variables */
+  int64_t i;
+  /* Print '0x' prefix. */
+  osDebugPrintChr('0');
+  osDebugPrintChr('x');
+  /* Loop over hex digits. */
+  for (i = 60; i >= 0; i -= 4)
+  {
+    /* Print hex digit. */
+    osDebugPrintChr("0123456789ABCDEF"[(hex>>i)&0x0F]);
+  }
+}
+
+/*****************************************************************************
+ *                          osDebugPrintFmt()
+ ****************************************************************************/
+
+void osDebugPrintFmt(char *fmt, ...)
+{
+  /* Let pArg point to function arguments. */
+  uint64_t *pArg = ((uint64_t *) &fmt)+20;
+
+  /* Loop over fmt. */
+  while (*fmt)
+  {
+    /* Check if current character is %. */
+    if (*fmt == '%')
+    {
+      /* Check next character after %. */
+      switch (*++fmt) {
+        /* [%c] Character. */
+        case 'c':
+          osDebugPrintChr((char) *pArg++);
+          break;
+        /* [%s] String. */
+        case 's':
+          osDebugPrintStr((char *) *pArg++);
+          break;
+        /* [%d] Decimal. */
+        case 'u':
+        case 'd':
+          osDebugPrintDec((uint64_t) *pArg++);
+          break;
+        /* [%x] Hexadecimal. */
+        case 'p':
+        case 'x':
+        case 'X':
+          osDebugPrintHex((uint64_t) *pArg++);
+          break;
+        /* [%%] Percentage. */
+        case '%':
+          osDebugPrintChr('%');
+          break;
+        /* [%?] Unknown. */
+        default:
+          osDebugPrintChr('?');
+          break;
+      }
+    }
+    else
+    {
+      /* Print plain character. */
+      osDebugPrintChr(*fmt);
+    }
+
+    /* Next character. */
+    fmt++;
   }
 }
