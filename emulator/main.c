@@ -79,24 +79,25 @@ char *qemu_cmd = "qemu\\qemu-system-aarch64.exe "
  ****************************************************************************/
 
 void program_start() {
-  char TempDirPath[512];
-  char CWDPath[512];
+  CHAR        TempDirPath[512];
+  CHAR        CWDPath[512];
+  HANDLE      hConsole;
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
-  printf("\n");
+  hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  SetConsoleTextAttribute(hConsole, 0x0A);
 
+  printf("\n");
   printf("Starting ARTOS emulator...\n");
 
   GetTempPathA(sizeof(TempDirPath)-1, TempDirPath);
   _chdir(TempDirPath);
-
   _mkdir("TempARTOS");
   _chdir("TempARTOS");
 
   _getcwd(CWDPath, sizeof(CWDPath));
   printf("Tempdir: %s\n", CWDPath);
-
   printf("\n");
 }
 
