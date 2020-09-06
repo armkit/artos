@@ -33,10 +33,12 @@
 #define OS_PRIV_H
 
 /*****************************************************************************
- *                          FUNCTION PROTOTYPES
+ *                              INCLUDES
  ****************************************************************************/
 
-void osSerialPut(char c);
+/* Kernel header files. */
+#include "kernel/types.h"
+#include "kernel/cpu.h"
 
 /*****************************************************************************
  *                            END OF HEADER

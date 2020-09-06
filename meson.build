@@ -42,7 +42,6 @@ sources=['boot/main.c',
          'boot/memmap.c',
          'boot/exit.c',
          'kernel/kernel.c',
-         'kernel/serial.c',
          'kernel/debug.c',
          'kernel/power.c']
 
