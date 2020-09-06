@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/power.c
- * @brief  ARTOS kernel power module.
+ * @file   kernel/cpu.h
+ * @brief  ARM-specific defines.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,20 +26,14 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                              INCLUDES
+ *                             SAFE GUARD
  ****************************************************************************/
 
-/* Kernel includes. */
-#include "kernel/os.h"
-#include "kernel/os_priv.h"
+#ifndef CPU_H
+#define CPU_H
 
 /*****************************************************************************
- *                             osPowerOff()
+ *                            END OF HEADER
  ****************************************************************************/
 
-void osPowerOff(void)
-{
-  /* Power State Coordination Interface: SYSTEM SHUTDOWN */
-  __asm__("LDR W0, =0x84000008");
-  __asm__("HVC #0");
-}
+#endif /* CPU_H */

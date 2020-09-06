@@ -1,13 +1,53 @@
+/***************************************************************************
+ *
+ *                   ARTOS Operating System.
+ *                 Copyright (C) 2020  ARMKit.
+ *
+ ***************************************************************************
+ * @file   emulator/main.c
+ * @brief  Emulator main code.
+ ***************************************************************************
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
+ *
+ ****************************************************************************/
+
+/*****************************************************************************
+ *                              INCLUDES
+ ****************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <direct.h>
 #include <windows.h>
 
+/*****************************************************************************
+ *                               DEFINES
+ ****************************************************************************/
+
 #define EXTERNAL_FILE(startsym, endsym, path) \
            __asm__(startsym ":\r\n"); \
            __asm__(".incbin \"" path "\"\r\n"); \
            __asm__(endsym ":\r\n");
+
+
+/*****************************************************************************
+ *                               EXTERNS
+ ****************************************************************************/
 
 EXTERNAL_FILE("qemu_start",  "qemu_end",  QEMU_FILE);
 EXTERNAL_FILE("uefi_start",  "uefi_end",  EFI_FILE);
@@ -16,6 +56,10 @@ EXTERNAL_FILE("artos_start", "artos_end", ARTOS_FILE);
 extern const char qemu_start, qemu_end;
 extern const char uefi_start, uefi_end;
 extern const char artos_start, artos_end;
+
+/*****************************************************************************
+ *                           GLOBAL VARIABLES
+ ****************************************************************************/
 
 char *boot_pattern = "BdsDxe: starting";
 
@@ -30,7 +74,11 @@ char *qemu_cmd = "qemu\\qemu-system-aarch64.exe "
                  "-icount shift=1,align=off,sleep=off "
                  "";
 
-void start_program() {
+/*****************************************************************************
+ *                            program_start()
+ ****************************************************************************/
+
+void program_start() {
   char TempDirPath[512];
   char CWDPath[512];
 
@@ -52,7 +100,11 @@ void start_program() {
   printf("\n");
 }
 
-void close_program(int code) {
+/*****************************************************************************
+ *                             program_end()
+ ****************************************************************************/
+
+void program_end(int code) {
   HMODULE hntdll;
   hntdll = GetModuleHandle("ntdll.dll");
   if (hntdll) {
@@ -63,6 +115,10 @@ void close_program(int code) {
   }
   exit(code);
 }
+
+/*****************************************************************************
+ *                             extract_artos()
+ ****************************************************************************/
 
 void extract_artos() {
   FILE *fd;
@@ -85,6 +141,10 @@ void extract_artos() {
   printf("[DONE]\n");
 }
 
+/*****************************************************************************
+ *                             extract_uefi()
+ ****************************************************************************/
+
 void extract_uefi() {
   FILE *fd;
   const char *ptr_start;
@@ -103,6 +163,10 @@ void extract_uefi() {
 
   printf("[DONE]\n");
 }
+
+/*****************************************************************************
+ *                             extract_qemu()
+ ****************************************************************************/
 
 void extract_qemu() {
   const char *buff;
@@ -213,13 +277,21 @@ void extract_qemu() {
   printf("[DONE]\n");
 }
 
+/*****************************************************************************
+ *                             qemu_callback()
+ ****************************************************************************/
+
 void qemu_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired) {
   HANDLE hPipeWr;
   hPipeWr = *((PHANDLE) lpParameter);
   CloseHandle(hPipeWr);
 }
 
-void exec_qemu() {
+/*****************************************************************************
+ *                               qemu_exec()
+ ****************************************************************************/
+
+void qemu_exec() {
   SECURITY_ATTRIBUTES saAttr      = {0};
   PROCESS_INFORMATION processInfo = {0};
   STARTUPINFO         info        = {0};
@@ -244,7 +316,7 @@ void exec_qemu() {
 
   if (!CreatePipe(&hPipeRd, &hPipeWr, &saAttr, 0)) {
     printf("\nERROR: Unable to create named pipe.\n");
-    close_program(1);
+    program_end(1);
   }
 
   info.cb = sizeof(STARTUPINFO);
@@ -262,7 +334,7 @@ void exec_qemu() {
                      &info,
                      &processInfo)) {
     printf("\nERROR: Unable to execute QEMU.\n");
-    close_program(1);
+    program_end(1);
   }
 
   RegisterWaitForSingleObject(&hWaitObject,
@@ -326,19 +398,23 @@ void exec_qemu() {
   }
 
   GetExitCodeProcess(processInfo.hProcess, &dwExitCode);
-  close_program(dwExitCode);
+  program_end(dwExitCode);
 }
 
+/*****************************************************************************
+ *                                   main()
+ ****************************************************************************/
+
 int main() {
-  start_program();
+  program_start();
 
   extract_artos();
   extract_uefi();
   extract_qemu();
 
-  exec_qemu();
+  qemu_exec();
 
-  close_program(0);
+  program_end(0);
 
   return 0;
 }
