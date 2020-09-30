@@ -44,6 +44,10 @@
 /* Memory map key (used by ExitBootServices). */
 UINTN bootMemMapKey;
 
+/* Memory limits (passed to kernel) */
+UINT64 ramStart = 0;
+UINT64 ramEnd   = 0;
+
 /*****************************************************************************
  *                           STATIC VARIABLES
  ****************************************************************************/
@@ -74,13 +78,15 @@ static const UINT16 *bootEFIMemTypes[] = {
 void bootGetMemMap(void)
 {
   /* Local variables. */
-  EFI_STATUS             result;
-  UINTN                  mapSize = 0;
-  EFI_MEMORY_DESCRIPTOR *memoryMap = NULL;
-  UINTN                  mapKey;
-  UINTN                  descriptorSize;
-  UINT32                 descriptorVersion;
-  UINT32                 i;
+  EFI_STATUS             result             = EFI_SUCCESS;
+  UINTN                  mapSize            = 0;
+  EFI_MEMORY_DESCRIPTOR *memoryMap          = NULL;
+  UINTN                  mapKey             = 0;
+  UINTN                  descriptorSize     = 0;
+  UINT32                 descriptorVersion  = 0;
+  UINTN                  ramBase            = 0;
+  UINTN                  ramPages           = 0;
+  UINT32                 i                  = 0;
 
   /* Call GetMemoryMap with NULL to get the size of the map. */
   result = (EFI_STATUS) uefi_call_wrapper(
@@ -135,11 +141,11 @@ void bootGetMemMap(void)
   }
 
   /* Print good-looking header for the table. */
-  Print(L"----------------------------------------------------------\n");
-  Print(L"                SYSTEM MEMORY MAP TABLE                   \n");
-  Print(L"----------------------------------------------------------\n");
-  Print(L"     TYPE          START          END            ATTR     \n");
-  Print(L"----------------------------------------------------------\n");
+  Print(L"-----------------------------------------------------------\n");
+  Print(L"                SYSTEM MEMORY MAP TABLE                    \n");
+  Print(L"-----------------------------------------------------------\n");
+  Print(L"     TYPE          START          END            ATTR      \n");
+  Print(L"-----------------------------------------------------------\n");
 
   /* Loop over memory map entries. */
   for(i = 0; i < (mapSize/descriptorSize); i++)
@@ -167,13 +173,46 @@ void bootGetMemMap(void)
     /* Newline terminator. */
     Print(L"\n");
 
+    /* RAM space? */
+    if (memoryMap->Type == EfiConventionalMemory)
+    {
+      /* Choose the biggest continuous ram region. */
+      if (memoryMap->NumberOfPages > ramPages) {
+        ramBase  = memoryMap->PhysicalStart;
+        ramPages = memoryMap->NumberOfPages;
+      }
+    }
+
     /* Get next entry in the table. */
     memoryMap = (EFI_MEMORY_DESCRIPTOR*)(((char*)memoryMap)+descriptorSize);
   }
 
   /* Print table footer. */
-  Print(L"----------------------------------------------------------\n");
+  Print(L"-----------------------------------------------------------\n");
+
+  /* Calculate ram information. */
+  ramStart = ramBase;
+  ramEnd   = ramBase + ramPages*4096;
+
+  /* Print ram information. */
+  Print(L"   RAM START: 0x%X\n", ramStart);
+  Print(L"   RAM END:   0x%X\n", ramEnd);
+  Print(L"   RAM SIZE:  %dMB\n", (ramEnd-ramStart)/1024/1024);
+
+  /* Print another table footer. */
+  Print(L"-----------------------------------------------------------\n");
+
+  /* Print newline to keep space. */
   Print(L"\n");
+
+  /* Spawn an error if RAM couldn't be detected. */
+
+  /* Make sure GetMemoryMap returned EFI_BUFFER_TOO_SMALL. */
+  if (ramStart == ramEnd)
+  {
+    Print(L"BOOTLOADER: Failed to detect RAM information from EFI.\n");
+    while(1);
+  }
 
   /* Store memory map key in data section. */
   bootMemMapKey = mapKey;
