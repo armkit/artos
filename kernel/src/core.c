@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/init.c
- * @brief  Bootloader UEFI initialization code.
+ * @file   kernel/src/core.c
+ * @brief  ARTOS kernel core module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,44 +29,26 @@
  *                              INCLUDES
  ****************************************************************************/
 
-/* UEFI includes. */
-#include "efi.h"
-#include "efilib.h"
-
-/* Bootloader includes. */
-#include "boot/boot.h"
-#include "boot/boot_priv.h"
+/* Kernel includes. */
+#include "kernel/inc/interface.h"
+#include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                            GLOBAL VARIABLES
+ *                         osKernelInitialize()
  ****************************************************************************/
 
-/* UEFI boot data */
-EFI_HANDLE bootImageHandle;
-EFI_SYSTEM_TABLE *bootSystemTable;
-
-/*****************************************************************************
- *                            bootInitialize()
- ****************************************************************************/
-
-void bootInitialize(EFI_HANDLE        ImageHandle,
-                    EFI_SYSTEM_TABLE *SystemTable)
+void KernelCoreInitialize(void)
 {
-  /* Store UEFI ImageHandle in data section. */
-  bootImageHandle = ImageHandle;
+  /* Print something. */
+  KernelDebugPrintStr("Hello from kernel!\n");
+}
 
-  /* Store UEFI SystemTable in data section. */
-  bootSystemTable = SystemTable;
+/*****************************************************************************
+ *                           osKernelStart()
+ ****************************************************************************/
 
-  /* Initialize EFI library. */
-  InitializeLib(ImageHandle, SystemTable);
-
-  /* Print intro message. */
-  bootPrintSplashMsg();
-
-  /* Get memory map. */
-  bootGetMemMap();
-
-  /* Exit boot services. */
-  bootExitUEFI();
+void KernelCoreStart(void)
+{
+  /* Just shutdown for now. */
+  KernelPowerOff();
 }

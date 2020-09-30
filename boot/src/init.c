@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/boot_priv.h
- * @brief  Bootloader internal header file.
+ * @file   boot/src/init.c
+ * @brief  Bootloader UEFI initialization code.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,30 +26,47 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                             SAFE GUARD
+ *                              INCLUDES
  ****************************************************************************/
 
-#ifndef BOOT_PRIV_H
-#define BOOT_PRIV_H
+/* UEFI includes. */
+#include "efi.h"
+#include "efilib.h"
+
+/* Bootloader includes. */
+#include "boot/inc/interface.h"
+#include "boot/inc/internal.h"
 
 /*****************************************************************************
- *                          GLOBAL VARIABLES
+ *                            GLOBAL VARIABLES
  ****************************************************************************/
 
-extern EFI_HANDLE bootImageHandle;
-extern EFI_SYSTEM_TABLE *bootSystemTable;
-extern UINTN bootMemMapKey;
+/* UEFI boot data */
+EFI_HANDLE        BootImageHandle;
+EFI_SYSTEM_TABLE *BootSystemTable;
 
 /*****************************************************************************
- *                          FUNCTION PROTOTYPES
+ *                            bootInitialize()
  ****************************************************************************/
 
-void bootPrintSplashMsg(void);
-void bootGetMemMap(void);
-void bootExitUEFI(void);
+void BootInitialize(EFI_HANDLE        ImageHandle,
+                    EFI_SYSTEM_TABLE *SystemTable)
+{
+  /* Store UEFI ImageHandle in data section. */
+  BootImageHandle = ImageHandle;
 
-/*****************************************************************************
- *                            END OF HEADER
- ****************************************************************************/
+  /* Store UEFI SystemTable in data section. */
+  BootSystemTable = SystemTable;
 
-#endif /* BOOT_PRIV_H */
+  /* Initialize EFI library. */
+  InitializeLib(ImageHandle, SystemTable);
+
+  /* Print intro message. */
+  BootPrintSplashMsg();
+
+  /* Get memory map. */
+  BootGetMemMap();
+
+  /* Exit boot services. */
+  BootExitUEFI();
+}

@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/types.h
- * @brief  Data types header file.
+ * @file   emulator/inc/internal.h
+ * @brief  Emulator internal header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,27 +29,18 @@
  *                             SAFE GUARD
  ****************************************************************************/
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef EMULATOR_INTERNAL_H
+#define EMULATOR_INTERNAL_H
 
 /*****************************************************************************
- *                              TYPEDEFS
+ *                              INCLUDES
  ****************************************************************************/
 
-/* signed types */
-typedef signed char        int8_t;
-typedef signed short       int16_t;
-typedef signed int         int32_t;
-typedef signed long        int64_t;
-
-/* unsigned types */
-typedef unsigned char      uint8_t;
-typedef unsigned short     uint16_t;
-typedef unsigned int       uint32_t;
-typedef unsigned long      uint64_t;
+/* Emulator interface header. */
+#include "emulator/inc/interface.h"
 
 /*****************************************************************************
  *                            END OF HEADER
  ****************************************************************************/
 
-#endif /* TYPES_H */
+#endif /* EMULATOR_INTERNAL_H */

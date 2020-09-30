@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/main.c
- * @brief  Bootloader main file.
+ * @file   boot/src/exit.c
+ * @brief  Bootloader UEFI termination code.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,34 +29,34 @@
  *                              INCLUDES
  ****************************************************************************/
 
-/* UEFI includes (for efi_main prototype). */
+/* UEFI includes. */
 #include "efi.h"
+#include "efilib.h"
 
-/* Boot loader includes. */
-#include "boot/boot.h"
-
-/* Kernel includes. */
-#include "kernel/os.h"
+/* Bootloader includes. */
+#include "boot/inc/interface.h"
+#include "boot/inc/internal.h"
 
 /*****************************************************************************
- *                              efi_main()
+ *                             bootExitUEFI()
  ****************************************************************************/
 
-EFI_STATUS EFIAPI efi_main(EFI_HANDLE        ImageHandle,
-                           EFI_SYSTEM_TABLE *SystemTable)
+void BootExitUEFI(void)
 {
-  /* Initialize the boot loader. */
-  bootInitialize(ImageHandle, SystemTable);
+  /* Local variables. */
+  EFI_STATUS             result;
 
-  /* Initialize ARTOS kernel. */
-  osKernelInitialize();
+  /* Simply call ExitBootServices to exit UEFI. */
+  result = (EFI_STATUS) uefi_call_wrapper(
+             (void *)BootSystemTable->BootServices->ExitBootServices,
+             2,
+             BootImageHandle,
+             BootMemMapKey);
 
-  /* Create first thread to be executed by the kernel. */
-  /* osThreadNew(someThread, NULL, NULL); */
-
-  /* Start the kernel. */
-  osKernelStart();
-
-  /* Should never reach this line. */
-  return EFI_SUCCESS;
+  /* Make sure ExitBootServices is done successfully. */
+  if (result != EFI_SUCCESS)
+  {
+    Print(L"BOOTLOADER: Failed to exit UEFI boot services.\n");
+    while(1);
+  }
 }

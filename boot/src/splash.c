@@ -4,7 +4,7 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/splash.c
+ * @file   boot/src/splash.c
  * @brief  Bootloader splash printing code.
  ***************************************************************************
  *
@@ -34,15 +34,15 @@
 #include "efilib.h"
 
 /* Bootloader includes. */
-#include "boot/boot.h"
-#include "boot/boot_priv.h"
+#include "boot/inc/interface.h"
+#include "boot/inc/internal.h"
 
 /*****************************************************************************
  *                           STATIC VARIABLES
  ****************************************************************************/
 
 /* Splash message to print out. */
-static const UINT16 *bootSplashMsg =
+static const UINT16 *BootSplashMsg =
   L"\n"
   L"          ****************************************\n"
   L"          *        ARTOS Operating System        *\n"
@@ -74,8 +74,8 @@ static const UINT16 *bootSplashMsg =
  *                         bootPrintSplashMsg()
  ****************************************************************************/
 
-void bootPrintSplashMsg(void)
+void BootPrintSplashMsg(void)
 {
   /* Print intro message. */
-  Print(bootSplashMsg);
+  Print(BootSplashMsg);
 }

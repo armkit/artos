@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/os_priv.h
- * @brief  Kernel internal header file.
+ * @file   emulator/inc/interface.h
+ * @brief  Emulator interface header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,19 +29,18 @@
  *                             SAFE GUARD
  ****************************************************************************/
 
-#ifndef OS_PRIV_H
-#define OS_PRIV_H
+#ifndef EMULATOR_INTERFACE_H
+#define EMULATOR_INTERFACE_H
 
 /*****************************************************************************
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel header files. */
-#include "kernel/types.h"
-#include "kernel/cpu.h"
+/* Emulator config header. */
+#include "emulator/cfg/config.h"
 
 /*****************************************************************************
  *                            END OF HEADER
  ****************************************************************************/
 
-#endif /* OS_PRIV_H */
+#endif /* EMULATOR_INTERFACE_H */

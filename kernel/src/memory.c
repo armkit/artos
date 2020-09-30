@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/boot.h
- * @brief  Bootloader header file.
+ * @file   kernel/src/memory.c
+ * @brief  ARTOS kernel memory module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,21 +26,17 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                             SAFE GUARD
+ *                              INCLUDES
  ****************************************************************************/
 
-#ifndef BOOT_H
-#define BOOT_H
+/* Kernel includes. */
+#include "kernel/inc/interface.h"
+#include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                          FUNCTION PROTOTYPES
+ *                           GLOBAL VARIABLES
  ****************************************************************************/
 
-void bootInitialize(EFI_HANDLE        ImageHandle,
-                    EFI_SYSTEM_TABLE *SystemTable);
-
-/*****************************************************************************
- *                            END OF HEADER
- ****************************************************************************/
-
-#endif /* BOOT_H */
+/* RAM information */
+uint64_t KernelMemoryRamStart = KERNEL_CONFIG_RAM_START;
+uint64_t KernelMemoryRamEnd   = KERNEL_CONFIG_RAM_END;

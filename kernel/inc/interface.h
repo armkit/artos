@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/os.h
- * @brief  Kernel header file.
+ * @file   kernel/inc/interface.h
+ * @brief  Kernel interface header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,33 +29,57 @@
  *                             SAFE GUARD
  ****************************************************************************/
 
-#ifndef OS_H
-#define OS_H
+#ifndef KERNEL_INTERFACE_H
+#define KERNEL_INTERFACE_H
 
 /*****************************************************************************
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel header files. */
-#include "kernel/types.h"
+/* Kernel config header. */
+#include "kernel/cfg/config.h"
+
+/*****************************************************************************
+ *                              TYPEDEFS
+ ****************************************************************************/
+
+/* signed types */
+typedef signed char        int8_t;
+typedef signed short       int16_t;
+typedef signed int         int32_t;
+typedef signed long        int64_t;
+
+/* unsigned types */
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned int       uint32_t;
+typedef unsigned long      uint64_t;
+
+/*****************************************************************************
+ *                             EXTERNS
+ ****************************************************************************/
+
+/* RAM start and end variables */
+extern uint64_t KernelMemoryRamStart;
+extern uint64_t KernelMemoryRamEnd;
 
 /*****************************************************************************
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void osDebugPrintChr(char      chr);
-void osDebugPrintStr(char     *str);
-void osDebugPrintDec(uint64_t  dec);
-void osDebugPrintHex(uint64_t  hex);
-void osDebugPrintFmt(char     *fmt, ...);
+void KernelDebugPrintChr(char      chr);
+void KernelDebugPrintStr(char     *str);
+void KernelDebugPrintDec(uint64_t  dec);
+void KernelDebugPrintHex(uint64_t  hex);
+void KernelDebugPrintFmt(char     *fmt, ...);
 
-void osKernelInitialize(void);
-void osKernelStart(void);
+void KernelCoreInitialize(void);
+void KernelCoreStart(void);
 
-void osPowerOff(void);
+void KernelPowerOff(void);
 
 /*****************************************************************************
  *                            END OF HEADER
  ****************************************************************************/
 
-#endif /* OS_H */
+#endif /* KERNEL_INTERFACE_H */

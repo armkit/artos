@@ -4,7 +4,7 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/debug.c
+ * @file   kernel/src/debug.c
  * @brief  ARTOS kernel debug module.
  ***************************************************************************
  *
@@ -30,29 +30,29 @@
  ****************************************************************************/
 
 /* Kernel includes. */
-#include "kernel/os.h"
-#include "kernel/os_priv.h"
+#include "kernel/inc/interface.h"
+#include "kernel/inc/internal.h"
 
 /*****************************************************************************
  *                           osDebugPrintChr()
  ****************************************************************************/
 
-void osDebugPrintChr(char chr)
+void KernelDebugPrintChr(char chr)
 {
   /* Print character using kernel's internal ARM UART driver. */
-  osCpuSerialOut(chr);
+  KERNEL_CPU_SERIAL_PUT(chr);
 }
 
 /*****************************************************************************
  *                           osDebugPrintStr()
  ****************************************************************************/
 
-void osDebugPrintStr(char *str)
+void KernelDebugPrintStr(char *str)
 {
   /* Loop over str and print each character. */
   while (*str)
   {
-    osDebugPrintChr(*str++);
+    KernelDebugPrintChr(*str++);
   }
 }
 
@@ -60,20 +60,20 @@ void osDebugPrintStr(char *str)
  *                          osDebugPrintDec()
  ****************************************************************************/
 
-void osDebugPrintDec(uint64_t dec)
+void KernelDebugPrintDec(uint64_t dec)
 {
   /* Check which range dec is within. */
   if (dec < 10)
   {
     /* Just print dec (base case). */
-    osDebugPrintChr('0' + dec);
+    KernelDebugPrintChr('0' + dec);
   }
   else
   {
     /* Recursively print the remaining part. */
-    osDebugPrintDec(dec/10);
+    KernelDebugPrintDec(dec/10);
     /* Print the first digit. */
-    osDebugPrintDec(dec%10);
+    KernelDebugPrintDec(dec%10);
   }
 }
 
@@ -81,18 +81,18 @@ void osDebugPrintDec(uint64_t dec)
  *                          osDebugPrintHex()
  ****************************************************************************/
 
-void osDebugPrintHex(uint64_t hex)
+void KernelDebugPrintHex(uint64_t hex)
 {
   /* Local variables */
   int64_t i;
   /* Print '0x' prefix. */
-  osDebugPrintChr('0');
-  osDebugPrintChr('x');
+  KernelDebugPrintChr('0');
+  KernelDebugPrintChr('x');
   /* Loop over hex digits. */
   for (i = 60; i >= 0; i -= 4)
   {
     /* Print hex digit. */
-    osDebugPrintChr("0123456789ABCDEF"[(hex>>i)&0x0F]);
+    KernelDebugPrintChr("0123456789ABCDEF"[(hex>>i)&0x0F]);
   }
 }
 
@@ -100,7 +100,7 @@ void osDebugPrintHex(uint64_t hex)
  *                          osDebugPrintFmt()
  ****************************************************************************/
 
-void osDebugPrintFmt(char *fmt, ...)
+void KernelDebugPrintFmt(char *fmt, ...)
 {
   /* Let pArg point to function arguments. */
   uint64_t *pArg = ((uint64_t *) &fmt)+20;
@@ -115,37 +115,37 @@ void osDebugPrintFmt(char *fmt, ...)
       switch (*++fmt) {
         /* [%c] Character. */
         case 'c':
-          osDebugPrintChr((char) *pArg++);
+          KernelDebugPrintChr((char) *pArg++);
           break;
         /* [%s] String. */
         case 's':
-          osDebugPrintStr((char *) *pArg++);
+          KernelDebugPrintStr((char *) *pArg++);
           break;
         /* [%d] Decimal. */
         case 'u':
         case 'd':
-          osDebugPrintDec((uint64_t) *pArg++);
+          KernelDebugPrintDec((uint64_t) *pArg++);
           break;
         /* [%x] Hexadecimal. */
         case 'p':
         case 'x':
         case 'X':
-          osDebugPrintHex((uint64_t) *pArg++);
+          KernelDebugPrintHex((uint64_t) *pArg++);
           break;
         /* [%%] Percentage. */
         case '%':
-          osDebugPrintChr('%');
+          KernelDebugPrintChr('%');
           break;
         /* [%?] Unknown. */
         default:
-          osDebugPrintChr('?');
+          KernelDebugPrintChr('?');
           break;
       }
     }
     else
     {
       /* Print plain character. */
-      osDebugPrintChr(*fmt);
+      KernelDebugPrintChr(*fmt);
     }
 
     /* Next character. */

@@ -4,7 +4,7 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/memmap.c
+ * @file   boot/src/memmap.c
  * @brief  Bootloader UEFI Memory Map handling code.
  ***************************************************************************
  *
@@ -34,26 +34,25 @@
 #include "efilib.h"
 
 /* Bootloader includes. */
-#include "boot/boot.h"
-#include "boot/boot_priv.h"
+#include "boot/inc/interface.h"
+#include "boot/inc/internal.h"
+
+/* Other modules. */
+#include "kernel/inc/interface.h"
 
 /*****************************************************************************
  *                           GLOBAL VARIABLES
  ****************************************************************************/
 
 /* Memory map key (used by ExitBootServices). */
-UINTN bootMemMapKey;
-
-/* Memory limits (passed to kernel) */
-UINT64 ramStart = 0;
-UINT64 ramEnd   = 0;
+UINTN BootMemMapKey;
 
 /*****************************************************************************
  *                           STATIC VARIABLES
  ****************************************************************************/
 
 /* List of EFI memory types (for printing). */
-static const UINT16 *bootEFIMemTypes[] = {
+static const UINT16 *BootEFIMemTypes[] = {
   L"RESERVED",  /* EfiReservedMemoryType      */
   L"LOADCODE",  /* EfiLoaderCode              */
   L"LOADDATA",  /* EfiLoaderData              */
@@ -75,7 +74,7 @@ static const UINT16 *bootEFIMemTypes[] = {
  *                            bootGetMemMap()
  ****************************************************************************/
 
-void bootGetMemMap(void)
+void BootGetMemMap(void)
 {
   /* Local variables. */
   EFI_STATUS             result             = EFI_SUCCESS;
@@ -90,7 +89,7 @@ void bootGetMemMap(void)
 
   /* Call GetMemoryMap with NULL to get the size of the map. */
   result = (EFI_STATUS) uefi_call_wrapper(
-             (void *)bootSystemTable->BootServices->GetMemoryMap,
+             (void *)BootSystemTable->BootServices->GetMemoryMap,
              5,
              &mapSize,
              memoryMap,
@@ -110,7 +109,7 @@ void bootGetMemMap(void)
 
   /* Allocate pool for a new memory map */
   result = (EFI_STATUS) uefi_call_wrapper(
-             (void *)bootSystemTable->BootServices->AllocatePool,
+             (void *)BootSystemTable->BootServices->AllocatePool,
              3,
              EfiLoaderData,
              mapSize,
@@ -125,7 +124,7 @@ void bootGetMemMap(void)
 
   /* Retrieve full memory map. */
   result = (EFI_STATUS) uefi_call_wrapper(
-             (void *)bootSystemTable->BootServices->GetMemoryMap,
+             (void *)BootSystemTable->BootServices->GetMemoryMap,
              5,
              &mapSize,
              memoryMap,
@@ -154,7 +153,7 @@ void bootGetMemMap(void)
     Print(L"   ");
 
     /* Print entry type. */
-    Print(L"%s", bootEFIMemTypes[memoryMap->Type]);
+    Print(L"%s", BootEFIMemTypes[memoryMap->Type]);
     Print(L"     ");
 
     /* Print entry start address. */
@@ -191,13 +190,13 @@ void bootGetMemMap(void)
   Print(L"-----------------------------------------------------------\n");
 
   /* Calculate ram information. */
-  ramStart = ramBase;
-  ramEnd   = ramBase + ramPages*4096;
+  KernelMemoryRamStart = ramBase;
+  KernelMemoryRamEnd   = ramBase + ramPages*4096;
 
   /* Print ram information. */
-  Print(L"   RAM START: 0x%X\n", ramStart);
-  Print(L"   RAM END:   0x%X\n", ramEnd);
-  Print(L"   RAM SIZE:  %dMB\n", (ramEnd-ramStart)/1024/1024);
+  Print(L"   RAM START: 0x%X\n", KernelMemoryRamStart);
+  Print(L"   RAM END:   0x%X\n", KernelMemoryRamEnd);
+  Print(L"   RAM SIZE:  %dMB\n", ramPages*4/1024);
 
   /* Print another table footer. */
   Print(L"-----------------------------------------------------------\n");
@@ -208,12 +207,12 @@ void bootGetMemMap(void)
   /* Spawn an error if RAM couldn't be detected. */
 
   /* Make sure GetMemoryMap returned EFI_BUFFER_TOO_SMALL. */
-  if (ramStart == ramEnd)
+  if (ramPages == 0)
   {
     Print(L"BOOTLOADER: Failed to detect RAM information from EFI.\n");
     while(1);
   }
 
   /* Store memory map key in data section. */
-  bootMemMapKey = mapKey;
+  BootMemMapKey = mapKey;
 }

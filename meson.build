@@ -36,14 +36,15 @@ basename += '-'
 basename += host_machine.system()
 
 # sources
-sources=['boot/main.c',
-         'boot/init.c',
-         'boot/splash.c',
-         'boot/memmap.c',
-         'boot/exit.c',
-         'kernel/kernel.c',
-         'kernel/debug.c',
-         'kernel/power.c']
+sources=['boot/src/main.c',
+         'boot/src/init.c',
+         'boot/src/splash.c',
+         'boot/src/memmap.c',
+         'boot/src/exit.c',
+         'kernel/src/core.c',
+         'kernel/src/debug.c',
+         'kernel/src/memory.c',
+         'kernel/src/power.c']
 
 # create operating system image as an ELF library
 lib = library(basename, sources, name_prefix: '', name_suffix: 'so')
@@ -67,7 +68,7 @@ command += ['-o', exename]
 command += ['-DQEMU_FILE="' + meson.get_cross_property('qemu_file') + '"']
 command += ['-DEFI_FILE="' + meson.get_cross_property('efi_file') + '"']
 command += ['-DARTOS_FILE="' + efiname + '"']
-command += [meson.source_root() + '/emulator/main.c']
+command += [meson.source_root() + '/emulator/src/main.c']
 exe = custom_target(exename,
                     output: exename,
                     depends: efi,

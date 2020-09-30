@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/kernel.c
- * @brief  ARTOS kernel main module.
+ * @file   boot/src/main.c
+ * @brief  Bootloader main file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,26 +29,35 @@
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel includes. */
-#include "kernel/os.h"
-#include "kernel/os_priv.h"
+/* UEFI includes (for efi_main prototype). */
+#include "efi.h"
+
+/* Boot loader includes. */
+#include "boot/inc/interface.h"
+#include "boot/inc/internal.h"
+
+/* Other modules. */
+#include "kernel/inc/interface.h"
 
 /*****************************************************************************
- *                         osKernelInitialize()
+ *                              efi_main()
  ****************************************************************************/
 
-void osKernelInitialize(void)
+EFI_STATUS EFIAPI efi_main(EFI_HANDLE        ImageHandle,
+                           EFI_SYSTEM_TABLE *SystemTable)
 {
-  /* Print something. */
-  osDebugPrintStr("Hello from kernel!\n");
-}
+  /* Initialize the boot loader. */
+  BootInitialize(ImageHandle, SystemTable);
 
-/*****************************************************************************
- *                           osKernelStart()
- ****************************************************************************/
+  /* Initialize ARTOS kernel. */
+  KernelCoreInitialize();
 
-void osKernelStart(void)
-{
-  /* Just shutdown for now. */
-  osPowerOff();
+  /* Create first thread to be executed by the kernel. */
+  /* KernelThreadNew(someThread, NULL, NULL); */
+
+  /* Start the kernel. */
+  KernelCoreStart();
+
+  /* Should never reach this line. */
+  return EFI_SUCCESS;
 }

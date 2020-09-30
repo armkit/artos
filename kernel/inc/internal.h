@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/cpu.h
- * @brief  ARM-specific defines.
+ * @file   kernel/inc/internal.h
+ * @brief  Kernel internal header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,8 +29,15 @@
  *                             SAFE GUARD
  ****************************************************************************/
 
-#ifndef CPU_H
-#define CPU_H
+#ifndef KERNEL_INTERNAL_H
+#define KERNEL_INTERNAL_H
+
+/*****************************************************************************
+ *                              INCLUDES
+ ****************************************************************************/
+
+/* Kernel interface header. */
+#include "kernel/inc/interface.h"
 
 /*****************************************************************************
  *                              DEFINES
@@ -76,7 +83,7 @@
  *                         INLINE FUNCTIONS
  ****************************************************************************/
 
-inline static void osCpuSerialOut(char c)
+inline static void KERNEL_CPU_SERIAL_PUT(char c)
 {
   /* Wait until there is space in PL011 UART TX buffer. */
   while (UARTFR & TXFF);
@@ -92,4 +99,4 @@ inline static void osCpuSerialOut(char c)
  *                            END OF HEADER
  ****************************************************************************/
 
-#endif /* CPU_H */
+#endif /* KERNEL_INTERNAL_H */

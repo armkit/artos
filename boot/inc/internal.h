@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   boot/exit.c
- * @brief  Bootloader UEFI termination code.
+ * @file   boot/inc/internal.h
+ * @brief  Bootloader internal header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,37 +26,39 @@
  ****************************************************************************/
 
 /*****************************************************************************
+ *                             SAFE GUARD
+ ****************************************************************************/
+
+#ifndef BOOT_INTERNAL_H
+#define BOOT_INTERNAL_H
+
+/*****************************************************************************
  *                              INCLUDES
  ****************************************************************************/
 
-/* UEFI includes. */
-#include "efi.h"
-#include "efilib.h"
-
-/* Bootloader includes. */
-#include "boot/boot.h"
-#include "boot/boot_priv.h"
+/* Bootloader interface header. */
+#include "boot/inc/interface.h"
 
 /*****************************************************************************
- *                             bootExitUEFI()
+ *                          GLOBAL VARIABLES
  ****************************************************************************/
 
-void bootExitUEFI(void)
-{
-  /* Local variables. */
-  EFI_STATUS             result;
+extern EFI_HANDLE        BootImageHandle;
+extern EFI_SYSTEM_TABLE *BootSystemTable;
+extern UINTN             BootMemMapKey;
 
-  /* Simply call ExitBootServices to exit UEFI. */
-  result = (EFI_STATUS) uefi_call_wrapper(
-             (void *)bootSystemTable->BootServices->ExitBootServices,
-             2,
-             bootImageHandle,
-             bootMemMapKey);
+/*****************************************************************************
+ *                          FUNCTION PROTOTYPES
+ ****************************************************************************/
 
-  /* Make sure ExitBootServices is done successfully. */
-  if (result != EFI_SUCCESS)
-  {
-    Print(L"BOOTLOADER: Failed to exit UEFI boot services.\n");
-    while(1);
-  }
-}
+void BootInitialize(EFI_HANDLE        ImageHandle,
+                    EFI_SYSTEM_TABLE *SystemTable);
+void BootPrintSplashMsg(void);
+void BootGetMemMap(void);
+void BootExitUEFI(void);
+
+/*****************************************************************************
+ *                            END OF HEADER
+ ****************************************************************************/
+
+#endif /* BOOT_INTERNAL_H */
