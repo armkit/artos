@@ -34,6 +34,15 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
+ *                              TYPEDEFS
+ ****************************************************************************/
+
+typedef struct node {
+  struct node *next;
+  uint64_t     size;
+} node_t;
+
+/*****************************************************************************
  *                           GLOBAL VARIABLES
  ****************************************************************************/
 
@@ -42,8 +51,8 @@ uint64_t KernelMemoryRamStart = KERNEL_CONFIG_RAM_START;
 uint64_t KernelMemoryRamEnd   = KERNEL_CONFIG_RAM_END;
 
 /* Linkedlist for free pages. */
-uint8_t *KernelMemoryFreeHead = NULL;
-uint8_t *KernelMemoryFreeTail = NULL;
+node_t *KernelMemoryFreeHead = NULL;
+node_t *KernelMemoryFreeTail = NULL;
 
 /*****************************************************************************
  *                       KernelMemoryInitialize()
@@ -51,23 +60,51 @@ uint8_t *KernelMemoryFreeTail = NULL;
 
 void KernelMemoryInitialize(void)
 {
-  /* Local variables. */
-  uint8_t *firstPage = (uint8_t *) (KernelMemoryRamStart);
-  uint8_t *lastPage  = (uint8_t *) (KernelMemoryRamEnd - PAGE_SIZE);
-  uint8_t *curPage   = NULL;
-
   /* Create linkedlist of free RAM pages. */
-  KernelMemoryFreeHead = firstPage;
-  KernelMemoryFreeTail = lastPage;
+  KernelMemoryFreeHead = (node_t *) KernelMemoryRamStart;
+  KernelMemoryFreeTail = (node_t *) KernelMemoryRamStart;
 
-  /* Loop over RAM pages and add them to linkedlist. */
-  for (curPage = firstPage; curPage < lastPage; curPage += PAGE_SIZE)
-  {
-    *((uint64_t *) curPage) = ((uint64_t) curPage) + PAGE_SIZE;
-  }
+  /* Initialize linkedlist. */
+  KernelMemoryFreeHead->next = NULL;
+  KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
 
-  /* Last page should be a null pointer. */
-  *((uint64_t *) curPage) = (uint64_t) NULL;
+  /* Let's assume memory consists of only 3 pages: */
+  KernelMemoryFreeHead->size = 3*PAGE_SIZE;
+
+  /* Allocate some pages. */
+  KernelDebugPrintFmt("\n");
+  KernelDebugPrintFmt("Page #1: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #2: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #3: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #4: %p\n", KernelMemoryPageAllocate());
+
+  /* Print linkedlist info. */
+  KernelDebugPrintFmt("\n");
+  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
+  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
+
+  /* Free up a page */
+  KernelMemoryPageDeallocate((void *) 0x0000000040002000);
+
+  /* Print linkedlist info. */
+  KernelDebugPrintFmt("\n");
+  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
+  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
+
+  /* Free up a page */
+  KernelMemoryPageDeallocate((void *) 0x0000000040000000);
+
+  /* Print linkedlist info. */
+  KernelDebugPrintFmt("\n");
+  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
+  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
+
+  /* Allocate some pages. */
+  KernelDebugPrintFmt("\n");
+  KernelDebugPrintFmt("Page #1: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #2: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #3: %p\n", KernelMemoryPageAllocate());
+  KernelDebugPrintFmt("Page #4: %p\n", KernelMemoryPageAllocate());
 }
 
 /*****************************************************************************
@@ -76,13 +113,38 @@ void KernelMemoryInitialize(void)
 
 void *KernelMemoryPageAllocate(void)
 {
-  /* Local variables */
+  /* Local variables. */
+  node_t *freePage = NULL;
+  node_t *newHead  = NULL;
 
-  //if (KernelMemoryFreeHead == NULL) {
+  /* Linkedlist is not empty? */
+  if (KernelMemoryFreeHead != NULL) {
+    /* Allocate the page at the head. */
+    freePage = (node_t *) KernelMemoryFreeHead;
 
-  //}
+    /* Big page? */
+    if (KernelMemoryFreeHead->size > PAGE_SIZE) {
+      /* Split the page. */
+      newHead = (node_t *) (((uint8_t *) freePage) + PAGE_SIZE);
+      newHead->next = KernelMemoryFreeHead->next;
+      newHead->size = KernelMemoryFreeHead->size - PAGE_SIZE;
+      /* Update head. */
+      KernelMemoryFreeHead = newHead;
+    } else {
+      /* Use the whole page. */
+      newHead = KernelMemoryFreeHead->next;
+      /* Update head. */
+      KernelMemoryFreeHead = newHead;
+    }
 
-  return NULL;
+    /* Update tail if necessary */
+    if (KernelMemoryFreeTail == freePage) {
+      KernelMemoryFreeTail = KernelMemoryFreeHead;
+    }
+  }
+
+  /* Return allocated page. */
+  return freePage;
 }
 
 /*****************************************************************************
@@ -91,5 +153,22 @@ void *KernelMemoryPageAllocate(void)
 
 void KernelMemoryPageDeallocate(void *pageBaseAddr)
 {
-  (void) pageBaseAddr;
+  /* Local variables. */
+  node_t *freePage = NULL;
+
+  /* Read parameter. */
+  freePage = (node_t *)(((uint64_t)pageBaseAddr)&~(((uint64_t)PAGE_SIZE)-1));
+
+  /* Insert page into linkedlist. */
+  if (KernelMemoryFreeHead == NULL) {
+    KernelMemoryFreeHead  = freePage;
+    KernelMemoryFreeTail  = freePage;
+  } else {
+    KernelMemoryFreeTail->next = freePage;
+    KernelMemoryFreeTail       = freePage;
+  }
+
+  /* Re-initialize page info. */
+  freePage->next = NULL;
+  freePage->size = PAGE_SIZE;
 }
