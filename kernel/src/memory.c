@@ -37,6 +37,59 @@
  *                           GLOBAL VARIABLES
  ****************************************************************************/
 
-/* RAM information */
+/* RAM information. */
 uint64_t KernelMemoryRamStart = KERNEL_CONFIG_RAM_START;
 uint64_t KernelMemoryRamEnd   = KERNEL_CONFIG_RAM_END;
+
+/* Linkedlist for free pages. */
+uint8_t *KernelMemoryFreeHead = NULL;
+uint8_t *KernelMemoryFreeTail = NULL;
+
+/*****************************************************************************
+ *                       KernelMemoryInitialize()
+ ****************************************************************************/
+
+void KernelMemoryInitialize(void)
+{
+  /* Local variables. */
+  uint8_t *firstPage = (uint8_t *) (KernelMemoryRamStart);
+  uint8_t *lastPage  = (uint8_t *) (KernelMemoryRamEnd - PAGE_SIZE);
+  uint8_t *curPage   = NULL;
+
+  /* Create linkedlist of free RAM pages. */
+  KernelMemoryFreeHead = firstPage;
+  KernelMemoryFreeTail = lastPage;
+
+  /* Loop over RAM pages and add them to linkedlist. */
+  for (curPage = firstPage; curPage < lastPage; curPage += PAGE_SIZE)
+  {
+    *((uint64_t *) curPage) = ((uint64_t) curPage) + PAGE_SIZE;
+  }
+
+  /* Last page should be a null pointer. */
+  *((uint64_t *) curPage) = (uint64_t) NULL;
+}
+
+/*****************************************************************************
+ *                       KernelMemoryPageAllocate()
+ ****************************************************************************/
+
+void *KernelMemoryPageAllocate(void)
+{
+  /* Local variables */
+
+  //if (KernelMemoryFreeHead == NULL) {
+
+  //}
+
+  return NULL;
+}
+
+/*****************************************************************************
+ *                      KernelMemoryPageDeallocate()
+ ****************************************************************************/
+
+void KernelMemoryPageDeallocate(void *pageBaseAddr)
+{
+  (void) pageBaseAddr;
+}

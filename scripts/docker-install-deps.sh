@@ -12,6 +12,7 @@ apt-get install -y ca-certificates                  \
                    wget                             \
                    p7zip-full                       \
                    python3                          \
+                   python3-pip                      \
                    meson                            \
                    ninja-build                      \
                    binutils                         \
@@ -19,11 +20,16 @@ apt-get install -y ca-certificates                  \
                    binutils-aarch64-linux-gnu       \
                    gcc-aarch64-linux-gnu            \
                    mingw-w64                        \
+                   gdb-multiarch                    \
                    gnu-efi:arm64                    \
                    expect                           \
                    qemu-system                      \
                    wine                             \
                    ;
+
+pip3 install greenlet==0.4.14
+pip3 install pygdbmi==0.10.0.0
+pip3 install gdbgui==0.14.0.0
 
 wget -O qemu-w64-setup.exe https://qemu.weilnetz.de/w64/2020/qemu-w64-setup-20200814.exe
 7z x -oqemu-setup qemu-w64-setup.exe

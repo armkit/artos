@@ -63,16 +63,17 @@ extern const char artos_start, artos_end;
 
 char *boot_pattern = "BdsDxe: starting";
 
-char *qemu_cmd = "qemu\\qemu-system-aarch64.exe "
-                 "-M virt "
-                 "-cpu cortex-a57 "
-                 "-m 1G "
-                 "-display none "
-                 "-serial stdio "
-                 "-bios firmware\\uefi_code.fd "
-                 "-drive file=fat:rw:disk,if=virtio,format=raw "
-                 "-icount shift=1,align=off,sleep=off "
-                 "";
+char qemu_cmd[1024] = "qemu\\qemu-system-aarch64.exe "
+                      "-M virt "
+                      "-cpu cortex-a57 "
+                      "-m 1G "
+                      "-display none "
+                      "-serial stdio "
+                      "-bios firmware\\uefi_code.fd "
+                      "-drive file=fat:rw:disk,if=virtio,format=raw "
+                      "-icount shift=1,align=off,sleep=off "
+                      "-gdb tcp::51234 "
+                      "";
 
 /*****************************************************************************
  *                            program_start()
@@ -107,10 +108,10 @@ void program_start() {
 
 void program_end(int code) {
   HMODULE hntdll;
+  printf("\n");
   hntdll = GetModuleHandle("ntdll.dll");
   if (hntdll) {
     if (GetProcAddress(hntdll, "wine_get_version") == NULL) {
-      printf("\n");
       system("pause");
     }
   }
@@ -292,7 +293,7 @@ void qemu_callback(PVOID lpParameter, BOOLEAN TimerOrWaitFired) {
  *                               qemu_exec()
  ****************************************************************************/
 
-void qemu_exec() {
+void qemu_exec(int argc, char *argv[]) {
   SECURITY_ATTRIBUTES saAttr      = {0};
   PROCESS_INFORMATION processInfo = {0};
   STARTUPINFO         info        = {0};
@@ -306,7 +307,7 @@ void qemu_exec() {
   BOOL                bSuccess = FALSE;
   BOOL                bDone    = FALSE;
   BOOL                bEscaped = FALSE;
-  BOOL                bBooted  = TRUE;
+  BOOL                bBooted  = FALSE;
   DWORD               i;
   DWORD               j;
   DWORD               k;
@@ -323,6 +324,11 @@ void qemu_exec() {
   info.cb = sizeof(STARTUPINFO);
   info.dwFlags = STARTF_USESTDHANDLES;
   info.hStdOutput = hPipeWr;
+
+  for (i = 1; i < argc; i++) {
+    strcat(qemu_cmd, argv[i]);
+    strcat(qemu_cmd, " ");
+  }
 
   if (!CreateProcess("qemu\\qemu-system-aarch64.exe",
                      qemu_cmd,
@@ -345,11 +351,9 @@ void qemu_exec() {
                               INFINITE,
                               WT_EXECUTEONLYONCE);
 
-  printf("Booting up UEFI...                                      ");
-
-  bBooted  = FALSE;
-  bEscaped = FALSE;
-  bDone    = FALSE;
+  if (bBooted == FALSE) {
+    printf("Booting up UEFI...                                      ");
+  }
 
   i = 0;
   j = 0;
@@ -363,10 +367,10 @@ void qemu_exec() {
       for (i = 0; i < dwRead; i++) {
         if (bEscaped == TRUE) {
           chCmd[j++] = chBuf[i];
-          if (chBuf[i] >= 'A' && chBuf[i] != ';') {
+          if (chBuf[i] >= 'A' && chBuf[i] != ';' && chBuf[i] != '[') {
             chCmd[j] = 0;
             if (bBooted == TRUE) {
-              printf("TTY CMD: %s\n", chCmd);
+              /*printf("TTY CMD: %s\n", chCmd);*/
             }
             bEscaped = FALSE;
           }
@@ -406,14 +410,14 @@ void qemu_exec() {
  *                                   main()
  ****************************************************************************/
 
-int main() {
+int main(int argc, char *argv[]) {
   program_start();
 
   extract_artos();
   extract_uefi();
   extract_qemu();
 
-  qemu_exec();
+  qemu_exec(argc, argv);
 
   program_end(0);
 

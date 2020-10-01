@@ -28,4 +28,4 @@ REM * 02110-1301, USA.
 REM *
 REM **************************************************************************
 
-docker build  -t artos:latest . | findstr /V "SECURITY WARN"
+docker run -p 5000:5000 -it artos:latest %*

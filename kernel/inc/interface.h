@@ -40,20 +40,41 @@
 #include "kernel/cfg/config.h"
 
 /*****************************************************************************
+ *                              DEFINES
+ ****************************************************************************/
+
+/* Memory defs. */
+#define PAGE_SIZE             (4096u)
+
+/* Null Pointer */
+#if defined(NULL)
+#undef  NULL
+#endif
+#define NULL                  ((void *) -1)
+
+/* Error codes */
+#define KERNEL_SUCCESS        (0)
+#define KERNEL_ERR_RESOURCE   (-1)
+#define KERNEL_ERR_PARAMETER  (-2)
+
+/*****************************************************************************
  *                              TYPEDEFS
  ****************************************************************************/
 
-/* signed types */
+/* Signed types. */
 typedef signed char        int8_t;
 typedef signed short       int16_t;
 typedef signed int         int32_t;
 typedef signed long        int64_t;
 
-/* unsigned types */
+/* Unsigned types. */
 typedef unsigned char      uint8_t;
 typedef unsigned short     uint16_t;
 typedef unsigned int       uint32_t;
 typedef unsigned long      uint64_t;
+
+/* Error type. */
+typedef int64_t            error_t;
 
 /*****************************************************************************
  *                             EXTERNS
@@ -67,16 +88,20 @@ extern uint64_t KernelMemoryRamEnd;
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void KernelDebugPrintChr(char      chr);
-void KernelDebugPrintStr(char     *str);
-void KernelDebugPrintDec(uint64_t  dec);
-void KernelDebugPrintHex(uint64_t  hex);
-void KernelDebugPrintFmt(char     *fmt, ...);
+void     KernelDebugPrintChr(char      chr);
+void     KernelDebugPrintStr(char     *str);
+void     KernelDebugPrintDec(uint64_t  dec);
+void     KernelDebugPrintHex(uint64_t  hex);
+void     KernelDebugPrintFmt(char     *fmt, ...);
 
-void KernelCoreInitialize(void);
-void KernelCoreStart(void);
+void     KernelMemoryInitialize(void);
+void    *KernelMemoryPageAllocate(void);
+void     KernelMemoryPageDeallocate(void *pageBaseAddr);
 
-void KernelPowerOff(void);
+void     KernelCoreInitialize(void);
+void     KernelCoreStart(void);
+
+void     KernelPowerOff(void);
 
 /*****************************************************************************
  *                            END OF HEADER

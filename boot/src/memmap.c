@@ -79,7 +79,7 @@ void BootGetMemMap(void)
   /* Local variables. */
   EFI_STATUS             result             = EFI_SUCCESS;
   UINTN                  mapSize            = 0;
-  EFI_MEMORY_DESCRIPTOR *memoryMap          = NULL;
+  EFI_MEMORY_DESCRIPTOR *memoryMap          = EFI_NULL;
   UINTN                  mapKey             = 0;
   UINTN                  descriptorSize     = 0;
   UINT32                 descriptorVersion  = 0;
@@ -87,15 +87,15 @@ void BootGetMemMap(void)
   UINTN                  ramPages           = 0;
   UINT32                 i                  = 0;
 
-  /* Call GetMemoryMap with NULL to get the size of the map. */
+  /* Call GetMemoryMap with null to get the size of the map. */
   result = (EFI_STATUS) uefi_call_wrapper(
              (void *)BootSystemTable->BootServices->GetMemoryMap,
              5,
              &mapSize,
              memoryMap,
-             NULL,
+             EFI_NULL,
              &descriptorSize,
-             NULL);
+             EFI_NULL);
 
   /* Make sure GetMemoryMap returned EFI_BUFFER_TOO_SMALL. */
   if (result != EFI_BUFFER_TOO_SMALL)
