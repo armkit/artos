@@ -67,44 +67,21 @@ void KernelMemoryInitialize(void)
   /* Initialize linkedlist. */
   KernelMemoryFreeHead->next = NULL;
   KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
-
-  /* Let's assume memory consists of only 3 pages: */
-  KernelMemoryFreeHead->size = 3*PAGE_SIZE;
-
-  /* Allocate some pages. */
-  KernelDebugPrintFmt("\n");
-  KernelDebugPrintFmt("Page #1: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #2: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #3: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #4: %p\n", KernelMemoryPageAllocate());
-
-  /* Print linkedlist info. */
-  KernelDebugPrintFmt("\n");
-  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
-  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
-
-  /* Free up a page */
-  KernelMemoryPageDeallocate((void *) 0x0000000040002000);
-
-  /* Print linkedlist info. */
-  KernelDebugPrintFmt("\n");
-  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
-  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
-
-  /* Free up a page */
-  KernelMemoryPageDeallocate((void *) 0x0000000040000000);
-
-  /* Print linkedlist info. */
-  KernelDebugPrintFmt("\n");
-  KernelDebugPrintFmt("Head: %p\n", KernelMemoryFreeHead);
-  KernelDebugPrintFmt("Tail: %p\n", KernelMemoryFreeTail);
-
-  /* Allocate some pages. */
-  KernelDebugPrintFmt("\n");
-  KernelDebugPrintFmt("Page #1: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #2: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #3: %p\n", KernelMemoryPageAllocate());
-  KernelDebugPrintFmt("Page #4: %p\n", KernelMemoryPageAllocate());
+  /* Allocate one page */
+  void *l0_table = KernelMemoryPageAllocate();
+  
+  /* Move register into system */
+  __asm__("MSR TTBR1_EL1, %0"::"r"(l0_table));
+  __asm__("MSR TCR_EL1, %0"::"r"(0x0000000500100000));
+  __asm__("ISB");
+    
+  /* Move system into register */
+  __asm__("MRS x0, SCTLR_EL1");
+  __asm__("ORR x0, x0, #1");
+   
+  /* enable MMU */
+  __asm__("MSR SCTLR_EL1, x0");
+  __asm__("ISB");
 }
 
 /*****************************************************************************
