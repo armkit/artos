@@ -33,6 +33,10 @@
 #include "kernel/inc/interface.h"
 #include "kernel/inc/internal.h"
 
+#define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
+#define MRS(var, sys_reg) __asm__("MRS %0, " #sys_reg : "=r"(var));
+#define ISB()             __asm__("ISB")
+
 /*****************************************************************************
  *                              TYPEDEFS
  ****************************************************************************/
@@ -49,10 +53,14 @@ typedef struct node {
 /* RAM information. */
 uint64_t KernelMemoryRamStart = KERNEL_CONFIG_RAM_START;
 uint64_t KernelMemoryRamEnd   = KERNEL_CONFIG_RAM_END;
+uint64_t *mainTable;
+uint64_t sysCtrl  =  0;   
 
 /* Linkedlist for free pages. */
 node_t *KernelMemoryFreeHead = NULL;
 node_t *KernelMemoryFreeTail = NULL;
+
+
 
 /*****************************************************************************
  *                       KernelMemoryInitialize()
@@ -68,20 +76,18 @@ void KernelMemoryInitialize(void)
   KernelMemoryFreeHead->next = NULL;
   KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
   /* Allocate one page */
-  void *l0_table = KernelMemoryPageAllocate();
-  
-  /* Move register into system */
-  __asm__("MSR TTBR1_EL1, %0"::"r"(l0_table));
-  __asm__("MSR TCR_EL1, %0"::"r"(0x0000000500100000));
-  __asm__("ISB");
-    
-  /* Move system into register */
-  __asm__("MRS x0, SCTLR_EL1");
-  __asm__("ORR x0, x0, #1");
-   
-  /* enable MMU */
-  __asm__("MSR SCTLR_EL1, x0");
-  __asm__("ISB");
+  mainTable = (uint64_t *)KernelMemoryPageAllocate();
+
+  /* Move regular into system */
+  MSR(TTBR1_EL1, mainTable);
+  MSR(TCR_EL1, 0x0000000500100000);
+  ISB();
+
+  /*enable MMU */
+  MRS(sysCtrl, SCTLR_EL1);
+  sysCtrl |= 1;
+  MSR(SCTLR_EL1,  sysCtrl);
+  ISB();
 }
 
 /*****************************************************************************
