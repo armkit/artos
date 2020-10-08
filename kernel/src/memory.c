@@ -55,9 +55,9 @@ typedef struct node {
  ****************************************************************************/
 
 /* RAM information. */
-uint64_t KernelMemoryRamStart = KERNEL_CONFIG_RAM_START;
-uint64_t KernelMemoryRamEnd   = KERNEL_CONFIG_RAM_END;
-uint64_t *KernelMemoryMainTable; 
+uint64_t KernelMemoryRamStart   = KERNEL_CONFIG_RAM_START;
+uint64_t KernelMemoryRamEnd     = KERNEL_CONFIG_RAM_END;
+uint64_t *KernelMemoryMainTable = NULL; 
 
 /* Linkedlist for free pages. */
 node_t *KernelMemoryFreeHead = NULL;
@@ -85,6 +85,9 @@ void KernelMemoryInitialize(void)
 
   /* Update TTBR register with address to L1 page table. */
   MSR(TTBR1_EL1, KernelMemoryMainTable);
+  ISB();
+
+  /* Update TCR register with PIN values. */ 
   MSR(TCR_EL1, 0x0000000500100000);
   ISB();
 
