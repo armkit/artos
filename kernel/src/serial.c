@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/inc/internal.h
- * @brief  Kernel internal header file.
+ * @file   kernel/inc/internal.c
+ * @brief  ARTOS kernel serial module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -66,7 +66,7 @@
 #define CTSEn             (0x8000)
 
 /*****************************************************************************
- *                         INLINE FUNCTIONS
+ *                         KernelSerialPut()
  ****************************************************************************/
 
 void KernelSerialPut(char c)

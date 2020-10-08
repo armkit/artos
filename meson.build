@@ -45,7 +45,7 @@ sources=['boot/src/main.c',
          'kernel/src/debug.c',
          'kernel/src/memory.c',
          'kernel/src/power.c',
-		 'kernel/src/serial.c']
+         'kernel/src/serial.c']
 
 # create operating system image as an ELF library
 lib = library(basename, sources, name_prefix: '', name_suffix: 'so')

@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/debug.c
- * @brief  ARTOS kernel debug module.
+ * @file   kernel/src/internal.h
+ * @brief  Kernel internal header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
