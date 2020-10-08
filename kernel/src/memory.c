@@ -34,14 +34,6 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                                MACROS
- ****************************************************************************/
-
-#define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
-#define MRS(var, sys_reg) __asm__("MRS %0, " #sys_reg : "=r"(var));
-#define ISB()             __asm__("ISB")
-
-/*****************************************************************************
  *                              TYPEDEFS
  ****************************************************************************/
 
@@ -57,7 +49,6 @@ typedef struct node {
 /* RAM information. */
 uint64_t KernelMemoryRamStart   = KERNEL_CONFIG_RAM_START;
 uint64_t KernelMemoryRamEnd     = KERNEL_CONFIG_RAM_END;
-uint64_t *KernelMemoryMainTable = NULL; 
 
 /* Linkedlist for free pages. */
 node_t *KernelMemoryFreeHead = NULL;
@@ -69,9 +60,6 @@ node_t *KernelMemoryFreeTail = NULL;
 
 void KernelMemoryInitialize(void)
 {
-  /* Local variables. */
-  uint64_t sysCtrl = 0;
-
   /* Create linkedlist of free RAM pages. */
   KernelMemoryFreeHead = (node_t *) KernelMemoryRamStart;
   KernelMemoryFreeTail = (node_t *) KernelMemoryRamStart;
@@ -79,23 +67,6 @@ void KernelMemoryInitialize(void)
   /* Initialize linkedlist. */
   KernelMemoryFreeHead->next = NULL;
   KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
-
-  /* Allocate one page. */
-  KernelMemoryMainTable = (uint64_t *) KernelMemoryPageAllocate();
-
-  /* Update TTBR register with address to L1 page table. */
-  MSR(TTBR1_EL1, KernelMemoryMainTable);
-  ISB();
-
-  /* Update TCR register with PIN values. */ 
-  MSR(TCR_EL1, 0x0000000500100000);
-  ISB();
-
-  /* Enable MMU. */
-  MRS(sysCtrl, SCTLR_EL1);
-  sysCtrl |= 1;
-  MSR(SCTLR_EL1,  sysCtrl);
-  ISB();
 }
 
 /*****************************************************************************
