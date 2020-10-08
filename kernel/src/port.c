@@ -44,23 +44,24 @@
 /*****************************************************************************
  *                           GLOBAL VARIABLES
  ****************************************************************************/
-/* RAM information. */
-uint64_t *KernelPortMemoryMainTable = NULL;
+
+/* Pointer to L1 page table. */
+uint64_t *KernelPortPageTable = NULL;
 
 /*****************************************************************************
- *                       KernelPortMemoryInit
+ *                       KernelPortMemoryInitialize()
  ****************************************************************************/
 
-void KernelPortMemoryInit(void)
+void KernelPortMemoryInitialize(void)
 {
   /* Local variables. */
   uint64_t sysCtrl = 0;
 
   /* Allocate one page. */
-  KernelPortMemoryMainTable = (uint64_t *) KernelPortMemoryPageAllocate();
+  KernelPortPageTable = (uint64_t *) KernelPortMemoryPageAllocate();
 
   /* Update TTBR register with address to L1 page table. */
-  MSR(TTBR1_EL1, KernelPortMemoryMainTable);
+  MSR(TTBR1_EL1, KernelPortPageTable);
   ISB();
 
   /* Update TCR register with PIN values. */ 

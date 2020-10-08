@@ -105,6 +105,9 @@ void *KernelMemoryPageAllocate(void)
     }
   }
 
+  /* Initialize port-specific memory stuff. */
+  KernelPortMemoryInitialize();
+
   /* Return allocated page. */
   return freePage;
 }
