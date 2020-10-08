@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/inc/internal.h
- * @brief  Kernel internal header file.
+ * @file   kernel/src/port.c
+ * @brief  ARTOS kernel port module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,28 +26,51 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                             SAFE GUARD
- ****************************************************************************/
-
-#ifndef KERNEL_INTERNAL_H
-#define KERNEL_INTERNAL_H
-
-/*****************************************************************************
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel interface header. */
+/* Kernel includes. */
 #include "kernel/inc/interface.h"
+#include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                          FUNCTION PROTOTYPES
+ *                                MACROS
  ****************************************************************************/
 
-void KernelSerialPut(char c);
-void KernelPortMemoryInitialize(void);
+#define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
+#define MRS(var, sys_reg) __asm__("MRS %0, " #sys_reg : "=r"(var));
+#define ISB()             __asm__("ISB")
 
 /*****************************************************************************
- *                            END OF HEADER
+ *                           GLOBAL VARIABLES
  ****************************************************************************/
 
-#endif /* KERNEL_INTERNAL_H */
+/* Pointer to L1 page table. */
+uint64_t *KernelPortPageTable = NULL;
+
+/*****************************************************************************
+ *                       KernelPortMemoryInitialize()
+ ****************************************************************************/
+
+void KernelPortMemoryInitialize(void)
+{
+  /* Local variables. */
+  uint64_t sysCtrl = 0;
+
+  /* Allocate one page. */
+  KernelPortPageTable = (uint64_t *) KernelPortMemoryPageAllocate();
+
+  /* Update TTBR register with address to L1 page table. */
+  MSR(TTBR1_EL1, KernelPortPageTable);
+  ISB();
+
+  /* Update TCR register with PIN values. */ 
+  MSR(TCR_EL1, 0x0000000500100000);
+  ISB();
+
+  /* Enable MMU. */
+  MRS(sysCtrl, SCTLR_EL1);
+  sysCtrl |= 1;
+  MSR(SCTLR_EL1,  sysCtrl);
+  ISB();
+}
