@@ -34,7 +34,7 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                               ASSEMNBLY MACROS
+ *                              ASSEMNBLY MACROS
  ****************************************************************************/
 
 #define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
@@ -42,55 +42,55 @@
 #define ISB()             __asm__("ISB")
 
 /*****************************************************************************
- *                              TCR PINS MACROS
+ *                              TCR DEFINES
  ****************************************************************************/
 
-/* EPD macros. */
-#define EPD_WALK_ON_TLB_MISS 0
-#define EPD_EXCP_ON_TLB_MISS 1
+/* TCR.EPD field specification. */
+#define EPD_WALK_ON_TLB_MISS    0
+#define EPD_EXCP_ON_TLB_MISS    1
 
-/* IRGN macros. */
-#define IRGN_NON_CASHEABLE  0
-#define IRGN_WB_RA_WA       1
-#define IRGN_WT_RA_NWA      2
-#define IRGN_WB_RA_NWA      1
+/* TCR.IRGN field specification. */
+#define IRGN_NON_CASHEABLE      0
+#define IRGN_WB_RA_WA           1
+#define IRGN_WT_RA_NWA          2
+#define IRGN_WB_RA_NWA          1
 
-/* ORGN macros. */
-#define ORGN_NON_CASHEABLE  0
-#define ORGN_WB_RA_WA       1
-#define ORGN_WT_RA_NWA      2
-#define ORGN_WB_RA_NWA      1
+/* TCR.ORGN field specification. */
+#define ORGN_NON_CASHEABLE      0
+#define ORGN_WB_RA_WA           1
+#define ORGN_WT_RA_NWA          2
+#define ORGN_WB_RA_NWA          1
 
-/* SH macros. */
-#define SH_NON_SHAREABLE   0
-#define SH_OUTER_SHAREABLE 2
-#define SH_INNER_SHAREABLE 3
+/* TCR.SH field specification. */
+#define SH_NON_SHAREABLE        0
+#define SH_OUTER_SHAREABLE      2
+#define SH_INNER_SHAREABLE      3
 
-/* TG macros. */
-#define TG_4KB  0
-#define TG_64KB 1
-#define TG_16KB 2
+/* TCR.TG field specification. */
+#define TG_4KB                  0
+#define TG_64KB                 1
+#define TG_16KB                 2
 
-/* A macros. */
-#define A_TTBR0_DEFINES_ASID 0
-#define A_TTBR1_DEFINES_ASID 1
+/* TCR.A field specification. */
+#define A_TTBR0_DEFINES_ASID    0
+#define A_TTBR1_DEFINES_ASID    1
 
-/* IPS macros. */
-#define IPS_32_BITS 0
-#define IPS_36_BITS 1
-#define IPS_40_BITS 2
-#define IPS_42_BITS 3
-#define IPS_44_BITS 4
-#define IPS_48_BITS 5
-#define IPS_52_BITS 6
+/* TCR.IPS field specification. */
+#define IPS_32_BITS             0
+#define IPS_36_BITS             1
+#define IPS_40_BITS             2
+#define IPS_42_BITS             3
+#define IPS_44_BITS             4
+#define IPS_48_BITS             5
+#define IPS_52_BITS             6
 
-/* AS macros. */
-#define AS_ASID_SIZE_8_BITS  0
-#define AS_ASID_SIZE_16_BITS 1
+/* TCR.AS field specification. */
+#define AS_ASID_SIZE_8_BITS     0
+#define AS_ASID_SIZE_16_BITS    1
 
-/* TBI macros. */
-#define TBI_T0P_BYTE_USED    0
-#define TBI_T0P_BYTE_IGNORED 1
+/* TCR.TBI field specification. */
+#define TBI_T0P_BYTE_USED       0
+#define TBI_T0P_BYTE_IGNORED    1
 
 /*****************************************************************************
  *                              TYPEDEFS

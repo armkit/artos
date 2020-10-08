@@ -91,7 +91,7 @@ void *KernelMemoryPageAllocate(void)
 
     /* Big page? */
     if (KernelMemoryFreeHead->size > PAGE_SIZE)
-	{
+    {
       /* Split the page. */
       newHead = (node_t *) (((uint8_t *) freePage) + PAGE_SIZE);
       newHead->next = KernelMemoryFreeHead->next;
@@ -99,8 +99,8 @@ void *KernelMemoryPageAllocate(void)
       /* Update head. */
       KernelMemoryFreeHead = newHead;
     }
-	else
-	{
+    else
+    {
       /* Use the whole page. */
       newHead = KernelMemoryFreeHead->next;
       /* Update head. */
@@ -109,7 +109,7 @@ void *KernelMemoryPageAllocate(void)
 
     /* Update tail if necessary */
     if (KernelMemoryFreeTail == freePage)
-	{
+    {
       KernelMemoryFreeTail = KernelMemoryFreeHead;
     }
   }
