@@ -37,7 +37,8 @@
  *                              TYPEDEFS
  ****************************************************************************/
 
-typedef struct node {
+typedef struct node
+{
   struct node *next;
   uint64_t     size;
 } node_t;
@@ -83,19 +84,23 @@ void *KernelMemoryPageAllocate(void)
   node_t *newHead  = NULL;
 
   /* Linkedlist is not empty? */
-  if (KernelMemoryFreeHead != NULL) {
+  if (KernelMemoryFreeHead != NULL)
+  {
     /* Allocate the page at the head. */
     freePage = (node_t *) KernelMemoryFreeHead;
 
     /* Big page? */
-    if (KernelMemoryFreeHead->size > PAGE_SIZE) {
+    if (KernelMemoryFreeHead->size > PAGE_SIZE)
+    {
       /* Split the page. */
       newHead = (node_t *) (((uint8_t *) freePage) + PAGE_SIZE);
       newHead->next = KernelMemoryFreeHead->next;
       newHead->size = KernelMemoryFreeHead->size - PAGE_SIZE;
       /* Update head. */
       KernelMemoryFreeHead = newHead;
-    } else {
+    }
+    else
+    {
       /* Use the whole page. */
       newHead = KernelMemoryFreeHead->next;
       /* Update head. */
@@ -103,7 +108,8 @@ void *KernelMemoryPageAllocate(void)
     }
 
     /* Update tail if necessary */
-    if (KernelMemoryFreeTail == freePage) {
+    if (KernelMemoryFreeTail == freePage)
+    {
       KernelMemoryFreeTail = KernelMemoryFreeHead;
     }
   }
@@ -125,10 +131,13 @@ void KernelMemoryPageDeallocate(void *pageBaseAddr)
   freePage = (node_t *)(((uint64_t)pageBaseAddr)&~(((uint64_t)PAGE_SIZE)-1));
 
   /* Insert page into linkedlist. */
-  if (KernelMemoryFreeHead == NULL) {
+  if (KernelMemoryFreeHead == NULL)
+  {
     KernelMemoryFreeHead  = freePage;
     KernelMemoryFreeTail  = freePage;
-  } else {
+  }
+  else
+  {
     KernelMemoryFreeTail->next = freePage;
     KernelMemoryFreeTail       = freePage;
   }
