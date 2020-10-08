@@ -34,7 +34,7 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                           osDebugPrintChr()
+ *                           KernelDebugPrintChr()
  ****************************************************************************/
 
 void KernelDebugPrintChr(char chr)
@@ -44,7 +44,7 @@ void KernelDebugPrintChr(char chr)
 }
 
 /*****************************************************************************
- *                           osDebugPrintStr()
+ *                           KernelDebugPrintStr()
  ****************************************************************************/
 
 void KernelDebugPrintStr(char *str)
@@ -57,7 +57,7 @@ void KernelDebugPrintStr(char *str)
 }
 
 /*****************************************************************************
- *                          osDebugPrintDec()
+ *                          KernelDebugPrintDec()
  ****************************************************************************/
 
 void KernelDebugPrintDec(uint64_t dec)
@@ -78,7 +78,7 @@ void KernelDebugPrintDec(uint64_t dec)
 }
 
 /*****************************************************************************
- *                          osDebugPrintHex()
+ *                          KernelDebugPrintHex()
  ****************************************************************************/
 
 void KernelDebugPrintHex(uint64_t hex)
@@ -97,7 +97,7 @@ void KernelDebugPrintHex(uint64_t hex)
 }
 
 /*****************************************************************************
- *                          osDebugPrintFmt()
+ *                          KernelDebugPrintFmt()
  ****************************************************************************/
 
 void KernelDebugPrintFmt(char *fmt, ...)
