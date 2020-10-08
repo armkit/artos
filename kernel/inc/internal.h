@@ -4,7 +4,7 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/internal.h
+ * @file   kernel/inc/internal.h
  * @brief  Kernel internal header file.
  ***************************************************************************
  *
@@ -43,7 +43,7 @@
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void KernelSerialPut(char);
+void KernelSerialPut(char c);
 
 /*****************************************************************************
  *                            END OF HEADER

@@ -4,7 +4,7 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/inc/internal.c
+ * @file   kernel/src/internal.c
  * @brief  ARTOS kernel serial module.
  ***************************************************************************
  *
