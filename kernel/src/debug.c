@@ -40,7 +40,7 @@
 void KernelDebugPrintChr(char chr)
 {
   /* Print character using kernel's internal ARM UART driver. */
-  KERNEL_CPU_SERIAL_PUT(chr);
+  KernelSerialPut(chr);
 }
 
 /*****************************************************************************
