@@ -67,6 +67,9 @@ void KernelMemoryInitialize(void)
   /* Initialize linkedlist. */
   KernelMemoryFreeHead->next = NULL;
   KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
+
+  /* Initialize port-specific memory stuff. */
+  KernelPortMemoryInitialize();
 }
 
 /*****************************************************************************
@@ -104,9 +107,6 @@ void *KernelMemoryPageAllocate(void)
       KernelMemoryFreeTail = KernelMemoryFreeHead;
     }
   }
-
-  /* Initialize port-specific memory stuff. */
-  KernelPortMemoryInitialize();
 
   /* Return allocated page. */
   return freePage;
