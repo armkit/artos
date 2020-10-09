@@ -96,36 +96,36 @@
  *                              TYPEDEFS
  ****************************************************************************/
 
+typedef struct TTBR 
+{
+  unsigned int RESV             :1;
+  unsigned long BASE_ADDRESS    :47;
+  unsigned int ASID             :16;
+} __attribute__((packed)) TTBR_t;
+
 typedef struct TCR
 {
-  unsigned int  T0SZ  :6;
-  unsigned int  RESV0 :1;
-  unsigned int  EPD0  :1;
-  unsigned int  IRGN0 :2;
-  unsigned int  ORGNO :2;
-  unsigned int  SH0   :2;
-  unsigned int  TG0   :2;
-  unsigned int  T1SZ  :6;
-  unsigned int  A1    :1;
-  unsigned int  EPD1  :1;
-  unsigned int  IRGN1 :2;
-  unsigned int  ORGN1 :2;
-  unsigned int  SH1   :2;
-  unsigned int  TG1   :2;
-  unsigned int  IPS   :3;
-  unsigned int  RESV1 :1;
-  unsigned int  AS    :1;
-  unsigned int  TBI0  :1;
-  unsigned int  TBI1  :1;
-  unsigned int  RESV2 :25;
+  unsigned int  T0SZ           :6;
+  unsigned int  RESV0          :1;
+  unsigned int  EPD0           :1;
+  unsigned int  IRGN0          :2;
+  unsigned int  ORGNO          :2;
+  unsigned int  SH0            :2;
+  unsigned int  TG0            :2;
+  unsigned int  T1SZ           :6;
+  unsigned int  A1             :1;
+  unsigned int  EPD1           :1;
+  unsigned int  IRGN1          :2;
+  unsigned int  ORGN1          :2;
+  unsigned int  SH1            :2;
+  unsigned int  TG1            :2;
+  unsigned int  IPS            :3;
+  unsigned int  RESV1          :1;
+  unsigned int  AS             :1;
+  unsigned int  TBI0           :1;
+  unsigned int  TBI1           :1;
+  unsigned int  RESV2          :25;
 } __attribute__((packed)) TCR_t;
-
-/*****************************************************************************
- *                           GLOBAL VARIABLES
- ****************************************************************************/
-
-/* Pointer to L1 page table. */
-uint64_t *KernelPortPageTable = NULL;
 
 /*****************************************************************************
  *                       KernelPortMemoryInitialize()
@@ -136,16 +136,27 @@ void KernelPortMemoryInitialize(void)
   /* Local variables. */
   uint64_t sysCtrl      = 0;
   //uint64_t ttbr0Value   = 0;
-  //uint64_t ttbr1Value   = 0;
+  uint64_t ttbr1Value   = 0;
   uint64_t tcrValue     = 0;
   //uint64_t sctlrValue   = 0;
   //TTBR_t *ttbr0Ptr      = NULL;
-  //TTBR_t *ttbr1Ptr      = NULL;
+  TTBR_t *ttbr1Ptr      = NULL;
   TCR_t *tcrPtr         = NULL;
   //SCTLR_t *sctlrPtr     = NULL;
-  
+
+  /* setup TTBR1_EL1 register. */
+  KernelDebugPrintFmt("TTBR1_EL1:  ");
+  ttbr1Ptr = (TTBR_t *) &ttbr1Value;
+  MRS(ttbr1Value, TTBR1_EL1);
+  KernelDebugPrintFmt("%x  ", ttbr1Value);
+  ttbr1Ptr->BASE_ADDRESS = (long )KernelMemoryPageAllocate();
+  KernelDebugPrintFmt("%x  ", ttbr1Value);
+  MSR(TTBR1_EL1, ttbr1Value);
+  ISB();
+  KernelDebugPrintFmt("\n");
+
   /* Setup TCR_EL1 register. */
-  KernelDebugPrintFmt("TCR_EL1:  ");
+  KernelDebugPrintFmt("TCR_EL1:    ");
   tcrPtr = (TCR_t *) &tcrValue;
   MRS(tcrValue, TCR_EL1);
   KernelDebugPrintFmt("%x  ", tcrValue);
@@ -165,13 +176,7 @@ void KernelPortMemoryInitialize(void)
   KernelDebugPrintFmt("%x  ", tcrValue);
   MSR(TCR_EL1, tcrValue);
   ISB();
-
-  /* Allocate one page. */
-  KernelPortPageTable = (uint64_t *) KernelMemoryPageAllocate();
-
-  /* Update TTBR register with address to L1 page table. */
-  MSR(TTBR1_EL1, KernelPortPageTable);
-  ISB();
+  KernelDebugPrintFmt("\n");
 
   /* Enable MMU. */
   MRS(sysCtrl, SCTLR_EL1);
