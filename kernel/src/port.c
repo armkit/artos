@@ -98,9 +98,9 @@
 
 typedef struct TTBR 
 {
-  unsigned int RESV             :1;
+  unsigned int  RESV            :1;
   unsigned long BASE_ADDRESS    :47;
-  unsigned int ASID             :16;
+  unsigned int  ASID            :16;
 } __attribute__((packed)) TTBR_t;
 
 typedef struct TCR
@@ -127,6 +127,12 @@ typedef struct TCR
   unsigned int  RESV2          :25;
 } __attribute__((packed)) TCR_t;
 
+typedef struct SCTLR
+{
+  unsigned int  MMU              :1;
+  unsigned long RESV             :63;
+} __attribute__((packed)) SCTLR_t;
+
 /*****************************************************************************
  *                       KernelPortMemoryInitialize()
  ****************************************************************************/
@@ -134,15 +140,14 @@ typedef struct TCR
 void KernelPortMemoryInitialize(void)
 {
   /* Local variables. */
-  uint64_t sysCtrl      = 0;
   //uint64_t ttbr0Value   = 0;
   uint64_t ttbr1Value   = 0;
   uint64_t tcrValue     = 0;
-  //uint64_t sctlrValue   = 0;
+  uint64_t sctlrValue   = 0;
   //TTBR_t *ttbr0Ptr      = NULL;
   TTBR_t *ttbr1Ptr      = NULL;
   TCR_t *tcrPtr         = NULL;
-  //SCTLR_t *sctlrPtr     = NULL;
+  SCTLR_t *sctlrPtr     = NULL;
 
   /* setup TTBR1_EL1 register. */
   KernelDebugPrintFmt("TTBR1_EL1:  ");
@@ -178,9 +183,13 @@ void KernelPortMemoryInitialize(void)
   ISB();
   KernelDebugPrintFmt("\n");
 
-  /* Enable MMU. */
-  MRS(sysCtrl, SCTLR_EL1);
-  sysCtrl |= 1;
-  MSR(SCTLR_EL1,  sysCtrl);
+  /* Setup SCTlR_EL1 register. */
+  KernelDebugPrintFmt("SCTLR_EL1:  ");
+  sctlrPtr = (SCTLR_t *) &sctlrValue;
+  MRS(sctlrValue, SCTLR_EL1);
+  KernelDebugPrintFmt("%x  ", sctlrValue);
+  sctlrPtr->MMU = 1;
+  KernelDebugPrintFmt("%x  ", sctlrValue);
+  MSR(SCTLR_EL1, sctlrValue);
   ISB();
 }
