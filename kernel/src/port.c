@@ -128,54 +128,49 @@ typedef struct TCR
 uint64_t *KernelPortPageTable = NULL;
 
 /*****************************************************************************
- *                           STATIC VARIABLES
- ****************************************************************************/
-
-/* Initial value for TCR register. */
-static const TCR_t KernelPortTcrValue =
-{
-  .T0SZ  = 0,
-  .RESV0 = 0,
-  .EPD0  = EPD_WALK_ON_TLB_MISS,
-  .IRGN0 = IRGN_NON_CASHEABLE,
-  .ORGNO = ORGN_NON_CASHEABLE,
-  .SH0   = SH_NON_SHAREABLE,
-  .TG0   = TG_4KB,
-  .T1SZ  = 16,
-  .A1    = A_TTBR1_DEFINES_ASID,
-  .EPD1  = EPD_WALK_ON_TLB_MISS,
-  .IRGN1 = IRGN_WB_RA_WA,
-  .ORGN1 = ORGN_WB_RA_WA,
-  .SH1   = SH_OUTER_SHAREABLE,
-  .TG1   = TG_4KB,
-  .IPS   = IPS_48_BITS,
-  .RESV1 = 0,
-  .AS    = AS_ASID_SIZE_16_BITS,
-  .TBI0  = TBI_T0P_BYTE_IGNORED,
-  .TBI1  = TBI_T0P_BYTE_USED,
-  .RESV2 = 0,
-};
-
-/*****************************************************************************
  *                       KernelPortMemoryInitialize()
  ****************************************************************************/
 
 void KernelPortMemoryInitialize(void)
 {
   /* Local variables. */
-  uint64_t sysCtrl         = 0;
-  uint64_t tcrInitValue    = 0;
+  uint64_t sysCtrl      = 0;
+  //uint64_t ttbr0Value   = 0;
+  //uint64_t ttbr1Value   = 0;
+  uint64_t tcrValue     = 0;
+  //uint64_t sctlrValue   = 0;
+  //TTBR_t *ttbr0Ptr      = NULL;
+  //TTBR_t *ttbr1Ptr      = NULL;
+  TCR_t *tcrPtr         = NULL;
+  //SCTLR_t *sctlrPtr     = NULL;
+  
+  /* Setup TCR_EL1 register. */
+  KernelDebugPrintFmt("TCR_EL1:  ");
+  tcrPtr = (TCR_t *) &tcrValue;
+  MRS(tcrValue, TCR_EL1);
+  KernelDebugPrintFmt("%x  ", tcrValue);
+  tcrPtr->T1SZ  = 16,
+  tcrPtr->A1    = A_TTBR1_DEFINES_ASID,
+  tcrPtr->EPD1  = EPD_WALK_ON_TLB_MISS,
+  tcrPtr->IRGN1 = IRGN_WB_RA_WA,
+  tcrPtr->ORGN1 = ORGN_WB_RA_WA,
+  tcrPtr->SH1   = SH_OUTER_SHAREABLE,
+  tcrPtr->TG1   = TG_4KB,
+  tcrPtr->IPS   = IPS_48_BITS,
+  tcrPtr->RESV1 = 0,
+  tcrPtr->AS    = AS_ASID_SIZE_16_BITS,
+  tcrPtr->TBI0  = TBI_T0P_BYTE_IGNORED,
+  tcrPtr->TBI1  = TBI_T0P_BYTE_USED,
+  tcrPtr->RESV2 = 0,
+  KernelDebugPrintFmt("%x  ", tcrValue);
+  MSR(TCR_EL1, tcrValue);
+  ISB();
 
   /* Allocate one page. */
   KernelPortPageTable = (uint64_t *) KernelMemoryPageAllocate();
 
   /* Update TTBR register with address to L1 page table. */
   MSR(TTBR1_EL1, KernelPortPageTable);
-  ISB();
-
-  /* Update TCR register with PIN values. */
-  tcrInitValue = *((uint64_t *) &KernelPortTcrValue);
-  MSR(TCR_EL1, tcrInitValue);
   ISB();
 
   /* Enable MMU. */
