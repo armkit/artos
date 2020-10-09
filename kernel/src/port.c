@@ -98,9 +98,9 @@
 
 typedef struct TTBR 
 {
-  unsigned int  RESV            :1;
-  unsigned long BASE_ADDRESS    :47;
-  unsigned int  ASID            :16;
+  unsigned int  RESV           :1;
+  unsigned long BASE_ADDRESS   :47;
+  unsigned int  ASID           :16;
 } __attribute__((packed)) TTBR_t;
 
 typedef struct TCR
@@ -129,8 +129,8 @@ typedef struct TCR
 
 typedef struct SCTLR
 {
-  unsigned int  MMU              :1;
-  unsigned long RESV             :63;
+  unsigned int  MMU            :1;
+  unsigned long RESV           :63;
 } __attribute__((packed)) SCTLR_t;
 
 /*****************************************************************************
