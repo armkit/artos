@@ -34,7 +34,7 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                              ASSEMNBLY MACROS
+ *                           ASSEMNBLY MACROS
  ****************************************************************************/
 
 #define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
@@ -42,7 +42,7 @@
 #define ISB()             __asm__("ISB")
 
 /*****************************************************************************
- *                              TCR DEFINES
+ *                              TCR MACROS
  ****************************************************************************/
 
 /* TCR.EPD field specification. */
@@ -96,65 +96,106 @@
  *                              TYPEDEFS
  ****************************************************************************/
 
+/* Invalid entry descriptor. */
+typedef struct INVENTRY
+{
+  unsigned long VALID          :1;
+  unsigned long IGNORED        :63;
+} __attribute__((packed)) INVENTRY_t;
+
+/* Block entry descriptor (1GB). */
+typedef struct BLKENTRY
+{
+  unsigned long VALID          :1;
+  unsigned long TYPE           :1;
+  unsigned long ATTRIDX        :3;
+  unsigned long NS             :1;
+  unsigned long AP             :2;
+  unsigned long SH             :2;
+  unsigned long AF             :1;
+  unsigned long NG             :1;
+  unsigned long RESV0          :18;
+  unsigned long ADDR           :18;
+  unsigned long RESV1          :4;
+  unsigned long CONT           :1;
+  unsigned long PXN            :1;
+  unsigned long XN             :1;
+  unsigned long IGNORED        :9;
+} __attribute__((packed)) BLKENTRY_t;
+
+/* Table entry descriptor. */
+typedef struct TBLENTRY
+{
+  unsigned long VALID          :1;
+  unsigned long TYPE           :1;
+  unsigned long IGNORED0       :10;
+  unsigned long ADDR           :36;
+  unsigned long RESV           :4;
+  unsigned long IGNORED1       :7;
+  unsigned long PXN            :1;
+  unsigned long UXN            :1;
+  unsigned long AP             :2;
+  unsigned long NS             :1; 
+} __attribute__((packed)) TBLENTRY_t;
+
+/* Page entry descriptor. */
+typedef struct PAGENTRY
+{
+  unsigned long VALID          :1;
+  unsigned long TYPE           :1;
+  unsigned long ATTRIDX        :3;
+  unsigned long NS             :1;
+  unsigned long AP             :2;
+  unsigned long SH             :2;
+  unsigned long AF             :1;
+  unsigned long NG             :1;
+  unsigned long ADDR           :36;
+  unsigned long RESV0          :4;
+  unsigned long CONT           :1;
+  unsigned long PXN            :1;
+  unsigned long UXN            :1;
+  unsigned long IGNORED        :9;
+} __attribute__((packed)) PAGENTRY_t;
+
+/* TTBR0 and TTBR1 register format. */
+typedef struct TTBR 
+{
+  unsigned long RESV           :1;
+  unsigned long BASE_ADDRESS   :47;
+  unsigned long ASID           :16;
+} __attribute__((packed)) TTBR_t;
+
+/* TCR register format. */
 typedef struct TCR
 {
-  unsigned int  T0SZ  :6;
-  unsigned int  RESV0 :1;
-  unsigned int  EPD0  :1;
-  unsigned int  IRGN0 :2;
-  unsigned int  ORGNO :2;
-  unsigned int  SH0   :2;
-  unsigned int  TG0   :2;
-  unsigned int  T1SZ  :6;
-  unsigned int  A1    :1;
-  unsigned int  EPD1  :1;
-  unsigned int  IRGN1 :2;
-  unsigned int  ORGN1 :2;
-  unsigned int  SH1   :2;
-  unsigned int  TG1   :2;
-  unsigned int  IPS   :3;
-  unsigned int  RESV1 :1;
-  unsigned int  AS    :1;
-  unsigned int  TBI0  :1;
-  unsigned int  TBI1  :1;
-  unsigned int  RESV2 :25;
+  unsigned long T0SZ           :6;
+  unsigned long RESV0          :1;
+  unsigned long EPD0           :1;
+  unsigned long IRGN0          :2;
+  unsigned long ORGNO          :2;
+  unsigned long SH0            :2;
+  unsigned long TG0            :2;
+  unsigned long T1SZ           :6;
+  unsigned long A1             :1;
+  unsigned long EPD1           :1;
+  unsigned long IRGN1          :2;
+  unsigned long ORGN1          :2;
+  unsigned long SH1            :2;
+  unsigned long TG1            :2;
+  unsigned long IPS            :3;
+  unsigned long RESV1          :1;
+  unsigned long AS             :1;
+  unsigned long TBI0           :1;
+  unsigned long TBI1           :1;
+  unsigned long RESV2          :25;
 } __attribute__((packed)) TCR_t;
 
-/*****************************************************************************
- *                           GLOBAL VARIABLES
- ****************************************************************************/
-
-/* Pointer to L1 page table. */
-uint64_t *KernelPortPageTable = NULL;
-
-/*****************************************************************************
- *                           STATIC VARIABLES
- ****************************************************************************/
-
-/* Initial value for TCR register. */
-static const TCR_t KernelPortTcrValue =
+/* SCTLR register format. */
+typedef struct SCTLR
 {
-  .T0SZ  = 0,
-  .RESV0 = 0,
-  .EPD0  = EPD_WALK_ON_TLB_MISS,
-  .IRGN0 = IRGN_NON_CASHEABLE,
-  .ORGNO = ORGN_NON_CASHEABLE,
-  .SH0   = SH_NON_SHAREABLE,
-  .TG0   = TG_4KB,
-  .T1SZ  = 16,
-  .A1    = A_TTBR1_DEFINES_ASID,
-  .EPD1  = EPD_WALK_ON_TLB_MISS,
-  .IRGN1 = IRGN_WB_RA_WA,
-  .ORGN1 = ORGN_WB_RA_WA,
-  .SH1   = SH_OUTER_SHAREABLE,
-  .TG1   = TG_4KB,
-  .IPS   = IPS_48_BITS,
-  .RESV1 = 0,
-  .AS    = AS_ASID_SIZE_16_BITS,
-  .TBI0  = TBI_T0P_BYTE_IGNORED,
-  .TBI1  = TBI_T0P_BYTE_USED,
-  .RESV2 = 0,
-};
+  unsigned long MMU            :1;
+  unsigned long RESV           :63;
+} __attribute__((packed)) SCTLR_t;
 
 /*****************************************************************************
  *                       KernelPortMemoryInitialize()
@@ -162,25 +203,65 @@ static const TCR_t KernelPortTcrValue =
 
 void KernelPortMemoryInitialize(void)
 {
-  /* Local variables. */
-  uint64_t sysCtrl         = 0;
-  uint64_t tcrInitValue    = 0;
-
-  /* Allocate one page. */
-  KernelPortPageTable = (uint64_t *) KernelMemoryPageAllocate();
-
-  /* Update TTBR register with address to L1 page table. */
-  MSR(TTBR1_EL1, KernelPortPageTable);
+  /* Registers as integers. */
+  uint64_t ttbr0Value   = 0;
+  uint64_t ttbr1Value   = 0;
+  uint64_t tcrValue     = 0;
+  uint64_t sctlrValue   = 0;
+  
+  /* Registers as structs. */
+  TTBR_t  *ttbr0Ptr     = NULL;
+  TTBR_t  *ttbr1Ptr     = NULL;
+  TCR_t   *tcrPtr       = NULL;
+  SCTLR_t *sctlrPtr     = NULL;
+  
+  /* Setup pointers. */
+  ttbr0Ptr = (TTBR_t  *) &ttbr0Value;
+  ttbr1Ptr = (TTBR_t  *) &ttbr1Value;
+  tcrPtr   = (TCR_t   *) &tcrValue;
+  sctlrPtr = (SCTLR_t *) &sctlrValue;
+  
+  /* Setup TTBR0_EL1 register. */
+  MRS(ttbr0Value, TTBR0_EL1);
+  KernelDebugPrintFmt("TTBR0_EL1:  %x", ttbr0Value);
+  (void) ttbr0Ptr;
+  KernelDebugPrintFmt(" -> %x\n", ttbr0Value);
+  MSR(TTBR0_EL1, ttbr0Value);
   ISB();
 
-  /* Update TCR register with PIN values. */
-  tcrInitValue = *((uint64_t *) &KernelPortTcrValue);
-  MSR(TCR_EL1, tcrInitValue);
+  /* Setup TTBR1_EL1 register. */
+  MRS(ttbr1Value, TTBR1_EL1);
+  KernelDebugPrintFmt("TTBR1_EL1:  %x", ttbr1Value);
+  (void) ttbr1Ptr;
+  KernelDebugPrintFmt(" -> %x\n", ttbr1Value);
+  MSR(TTBR1_EL1, ttbr1Value);
   ISB();
 
-  /* Enable MMU. */
-  MRS(sysCtrl, SCTLR_EL1);
-  sysCtrl |= 1;
-  MSR(SCTLR_EL1,  sysCtrl);
+  /* Setup TCR_EL1 register. */
+  MRS(tcrValue, TCR_EL1);
+  KernelDebugPrintFmt("TCR_EL1:    %x", tcrValue);
+  tcrPtr->T1SZ  = 16,
+  tcrPtr->A1    = A_TTBR1_DEFINES_ASID,
+  tcrPtr->EPD1  = EPD_WALK_ON_TLB_MISS,
+  tcrPtr->IRGN1 = IRGN_WB_RA_WA,
+  tcrPtr->ORGN1 = ORGN_WB_RA_WA,
+  tcrPtr->SH1   = SH_INNER_SHAREABLE,
+  tcrPtr->TG1   = TG_4KB,
+  tcrPtr->IPS   = IPS_48_BITS,
+  tcrPtr->RESV1 = 0,
+  tcrPtr->AS    = AS_ASID_SIZE_16_BITS,
+  tcrPtr->TBI0  = TBI_T0P_BYTE_IGNORED,
+  tcrPtr->TBI1  = TBI_T0P_BYTE_USED,
+  tcrPtr->RESV2 = 0,
+  KernelDebugPrintFmt(" -> %x\n", tcrValue);
+  MSR(TCR_EL1, tcrValue);
+  ISB();
+
+  /* Setup SCTlR_EL1 register. */
+  MRS(sctlrValue, SCTLR_EL1);
+  KernelDebugPrintFmt("SCTLR_EL1:  %x", sctlrValue);
+  sctlrPtr->MMU = 1;
+  KernelDebugPrintFmt(" -> %x\n", sctlrValue);
+  MSR(SCTLR_EL1, sctlrValue);
   ISB();
 }
