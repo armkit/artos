@@ -28,4 +28,15 @@ REM * 02110-1301, USA.
 REM *
 REM **************************************************************************
 
-docker build  -t artos:latest . | findstr /V "SECURITY WARN"
+echo > .fail
+
+(docker build  -t artos:latest . && del .fail) | findstr /V "SECURITY WARN"
+
+if exist .fail (
+  echo.
+  echo Error encountered while building docker image.
+  del .fail
+  exit /B -1
+) else (
+  exit /B 0
+)

@@ -39,9 +39,6 @@
 
 void KernelCoreInitialize(void)
 {
-  /* Print something. */
-  KernelDebugPrintStr("Hello from kernel!\n");
-
   /* Initialize kernel components. */
   KernelMemoryInitialize();
 }

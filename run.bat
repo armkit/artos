@@ -28,4 +28,6 @@ REM * 02110-1301, USA.
 REM *
 REM **************************************************************************
 
+if %errorlevel% neq 0 exit /b %errorlevel%
+
 docker run -p 5000:5000 -it artos:latest %*
