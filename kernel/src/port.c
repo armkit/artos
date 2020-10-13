@@ -111,8 +111,8 @@
  *                            PAGING MACROS
  ****************************************************************************/
 
-/* Maximum physical address */
-#define MAX_PHYSICAL_ADDRESS    0x8000000000UL
+/* Maximum possible physical address (max. is 0x0000FFFFFFFFFFFFUL). */
+#define LAST_PHYSICAL_ADDRESS   0x0000007FFFFFFFFFUL
 
 /* Table size. */
 #define ENTRY_COUNT             512
@@ -303,8 +303,11 @@ void KernelPortSetupTTB0 (void)
   L0Table = KernelMemoryPageAllocate();
 
   /* Loop over every gigabyte we want to setup. */
-  for (curAddr = 0; curAddr < MAX_PHYSICAL_ADDRESS; curAddr += 0x40000000)
+  do
   {
+    /* If CurL1Idx is 512, reset to 0 to start a new L1 table. */
+    curL1Idx %= ENTRY_COUNT;
+
     /* Beginning of a new L1 table? */
     if (curL1Idx == 0)
     {
@@ -316,7 +319,7 @@ void KernelPortSetupTTB0 (void)
       L0Table[curL0Idx] = tableEntryValue;
 
       /* Increase curL0Idx loop counter. */
-      curL0Idx = (curL0Idx + 1) % ENTRY_COUNT;
+      curL0Idx++;
     }
 
     /* Initialize corresponding entry in L1 table. */
@@ -324,8 +327,12 @@ void KernelPortSetupTTB0 (void)
     L1Table[curL1Idx] = blockEntryValue;
 
     /* Increase curL1Idx loop counter. */
-    curL1Idx = (curL1Idx + 1) % ENTRY_COUNT;
+    curL1Idx++;
+
+    /* Next 1GB. */
+    curAddr += 0x40000000;
   }
+  while (curAddr != 0 && curAddr <= LAST_PHYSICAL_ADDRESS);
 
   /* Initialize remaining main page table entries in the last l1 table. */
   for (; curL1Idx < ENTRY_COUNT; curL1Idx++)
@@ -591,9 +598,9 @@ void KernelPortSetupSCTLRPost (void)
 
 void KernelPortMemoryInitialize (void)
 {
-  /* Allocate TTB0 and TTB1 tables */
-  KernelPortSetupTTB0();
+  /* Allocate TTB0 and TTB1 tables (TTB1 first, then TTB0). */
   KernelPortSetupTTB1();
+  KernelPortSetupTTB0();
 
   /* Print empty line. */
   KernelDebugPrintFmt("\n");
