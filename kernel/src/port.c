@@ -69,6 +69,7 @@
 
 /* TCR.SH field specification. */
 #define SH_NON_SHAREABLE        0
+#define SH_RESERVED             1
 #define SH_OUTER_SHAREABLE      2
 #define SH_INNER_SHAREABLE      3
 
@@ -122,6 +123,42 @@
 #define TO_TBL_ADDR(PTR) ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
 #define TO_PAG_ADDR(PTR) ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
 #define TO_TTB_ADDR(PTR) ((((uint64_t)PTR)>> 1)&((1UL<<47)-1))
+
+/* .VALID field specification. */
+#define IS_INVALID              0
+#define IS_VALID                1
+
+/* .TYPE field specification. */
+#define TYPE_BLOCK              0
+#define TYPE_TABLE              1
+
+/* .NS field specification. */
+#define NS_SECURE               0
+#define NS_NON_SECURE           1
+
+/* .AP field specification. */
+#define AP_RW_NONE              0
+#define AP_RW_RW                1
+#define AP_RO_NONE              2
+#define AP_RO_RO                3
+
+/* .AF field specification. */
+#define AF_NON_ACCESSABLE       0
+#define AF_ACCESSABLE           1
+/* .NG field specification. */
+#define NG_GLOBAL               0
+#define NG_NOT_GLOBAL           1
+
+/* .CONT field specification. */
+#define CONT_DISABLE            0
+#define CONT_ENABLE             1
+
+/* .PXN field specification.*/
+#define PXN_PERMIT_EXEC         0
+#define PXN_NOT_PERMIT_EXEC     1
+
+
+
 
 /*****************************************************************************
  *                              TYPEDEFS
@@ -267,35 +304,35 @@ void KernelPortSetupTTB0 (void)
   blockEntry   = (BLKENTRY_t *) &blockEntryValue;
 
   /* Setup invalid entry. */
-  invalidEntry->VALID   = 0;
+  invalidEntry->VALID   = IS_INVALID;
   invalidEntry->IGNORED = 0;
 
   /* Setup table entry. */
-  tableEntry->VALID     = 0;
-  tableEntry->TYPE      = 0;
+  tableEntry->VALID     = IS_VALID;
+  tableEntry->TYPE      = TYPE_TABLE;
   tableEntry->IGNORED0  = 0;
   tableEntry->ADDR      = 0;
   tableEntry->RESV      = 0;
   tableEntry->IGNORED1  = 0;
-  tableEntry->PXN       = 0;
+  tableEntry->PXN       = PXN_PERMIT_EXEC;
   tableEntry->UXN       = 0;
-  tableEntry->AP        = 0;
-  tableEntry->NS        = 0;
+  tableEntry->AP        = AP_RW_RW;
+  tableEntry->NS        = NS_SECURE;
 
   /* Setup block entry. */
-  blockEntry->VALID     = 0;
-  blockEntry->TYPE      = 0;
+  blockEntry->VALID     = IS_VALID;
+  blockEntry->TYPE      = TYPE_BLOCK;
   blockEntry->ATTRIDX   = 0;
-  blockEntry->NS        = 0;
-  blockEntry->AP        = 0;
-  blockEntry->SH        = 0;
-  blockEntry->AF        = 0;
-  blockEntry->NG        = 0;
+  blockEntry->NS        = NS_SECURE;
+  blockEntry->AP        = AP_RW_RW;
+  blockEntry->SH        = SH_INNER_SHAREABLE;
+  blockEntry->AF        = AF_ACCESSABLE;
+  blockEntry->NG        = NG_GLOBAL;
   blockEntry->RESV0     = 0;
   blockEntry->ADDR      = 0;
   blockEntry->RESV1     = 0;
-  blockEntry->CONT      = 0;
-  blockEntry->PXN       = 0;
+  blockEntry->CONT      = CONT_ENABLE;
+  blockEntry->PXN       = PXN_PERMIT_EXEC;
   blockEntry->XN        = 0;
   blockEntry->IGNORED   = 0;
 
