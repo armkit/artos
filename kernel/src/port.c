@@ -327,7 +327,13 @@ void KernelPortSetupTTB0 (void)
     curL1Idx = (curL1Idx + 1) % ENTRY_COUNT;
   }
 
-  /* Initialize remaining main page table entries. */
+  /* Initialize remaining main page table entries in the last l1 table. */
+  for (; curL1Idx < ENTRY_COUNT; curL1Idx++)
+  {
+    L1Table[curL1Idx] = invalidEntryValue;
+  }
+
+  /* Initialize remaining main page table entries in l0 table. */
   for (; curL0Idx < ENTRY_COUNT; curL0Idx++)
   {
     L0Table[curL0Idx] = invalidEntryValue;
