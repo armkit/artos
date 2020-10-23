@@ -118,11 +118,17 @@
 /* Table size. */
 #define ENTRY_COUNT             512
 
-/* Conver 64-bit VA into address bits. */
-#define TO_BLK_ADDR(PTR) ((((uint64_t)PTR)>>30)&((1UL<<18)-1))
-#define TO_TBL_ADDR(PTR) ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
-#define TO_PAG_ADDR(PTR) ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
-#define TO_TTB_ADDR(PTR) ((((uint64_t)PTR)>> 1)&((1UL<<47)-1))
+/* Convert 64-bit VA into address bits. */
+#define TO_BLK_ADDR(PTR)     ((((uint64_t)PTR)>>30)&((1UL<<18)-1))
+#define TO_TBL_ADDR(PTR)     ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
+#define TO_PAG_ADDR(PTR)     ((((uint64_t)PTR)>>12)&((1UL<<36)-1))
+#define TO_TTB_ADDR(PTR)     ((((uint64_t)PTR)>> 1)&((1UL<<47)-1))
+
+/* Convert address bites into 64-bit VA. */
+#define FROM_BLK_ADDR(ADDR)  ((void *) ((uint64_t) ADDR<<30))
+#define FROM_TBL_ADDR(ADDR)  ((void *) ((uint64_t) ADDR<<12))
+#define FROM_PAG_ADDR(ADDR)  ((void *) ((uint64_t) ADDR<<12))
+#define FROM_TTB_ADDR(ADDR)  ((void *) ((uint64_t) ADDR<< 1))
 
 /* .VALID field specification. */
 #define IS_INVALID              0
@@ -131,6 +137,7 @@
 /* .TYPE field specification. */
 #define TYPE_BLOCK              0
 #define TYPE_TABLE              1
+#define TYPE_PAGE               1
 
 /* .NS field specification. */
 #define NS_SECURE               0
@@ -145,9 +152,10 @@
 /* .AF field specification. */
 #define AF_NON_ACCESSABLE       0
 #define AF_ACCESSABLE           1
+
 /* .NG field specification. */
 #define NG_GLOBAL               0
-#define NG_NOT_GLOBAL           1
+#define NG_NON_GLOBAL           1
 
 /* .CONT field specification. */
 #define CONT_DISABLE            0
@@ -156,9 +164,6 @@
 /* .PXN field specification.*/
 #define PXN_PERMIT_EXEC         0
 #define PXN_NOT_PERMIT_EXEC     1
-
-
-
 
 /*****************************************************************************
  *                              TYPEDEFS
@@ -316,7 +321,7 @@ void KernelPortSetupTTB0 (void)
   tableEntry->IGNORED1  = 0;
   tableEntry->PXN       = PXN_PERMIT_EXEC;
   tableEntry->UXN       = 0;
-  tableEntry->AP        = AP_RW_RW;
+  tableEntry->AP        = AP_RW_NONE;
   tableEntry->NS        = NS_SECURE;
 
   /* Setup block entry. */
@@ -324,7 +329,7 @@ void KernelPortSetupTTB0 (void)
   blockEntry->TYPE      = TYPE_BLOCK;
   blockEntry->ATTRIDX   = 0;
   blockEntry->NS        = NS_SECURE;
-  blockEntry->AP        = AP_RW_RW;
+  blockEntry->AP        = AP_RW_NONE;
   blockEntry->SH        = SH_INNER_SHAREABLE;
   blockEntry->AF        = AF_ACCESSABLE;
   blockEntry->NG        = NG_GLOBAL;
@@ -630,6 +635,492 @@ void KernelPortSetupSCTLRPost (void)
 }
 
 /*****************************************************************************
+ *                       KernelPortPageSetMap()
+ ****************************************************************************/
+
+void *KernelPortSetMap(void *virtualAddr, void *physicalAddr)
+{
+  /* Descriptors as integers. */
+  uint64_t    invalidEntryValue   = 0;
+  uint64_t    tableEntryValue     = 0;
+  uint64_t    pageEntryValue      = 0;
+
+  /* Descriptors as structs. */
+  INVENTRY_t *invalidEntry        = NULL;
+  TBLENTRY_t *tableEntry          = NULL;
+  PAGENTRY_t *pageEntry           = NULL;
+
+  /* Table entry numbers. */
+  uint64_t    L0EntryNo           = 0;
+  uint64_t    L1EntryNo           = 0;
+  uint64_t    L2EntryNo           = 0;
+  uint64_t    L3EntryNo           = 0;
+
+  /* Table pointers. */
+  uint64_t   *L0Table             = NULL;
+  uint64_t   *L1Table             = NULL;
+  uint64_t   *L2Table             = NULL;
+  uint64_t   *L3Table             = NULL;
+
+  /* Index counter for looping. */
+  uint64_t    i                   = 0;
+
+  /* Setup descriptor pointers. */
+  invalidEntry = (INVENTRY_t *) &invalidEntryValue;
+  tableEntry   = (TBLENTRY_t *) &tableEntryValue;
+  pageEntry    = (PAGENTRY_t *) &pageEntryValue;
+
+  /* Setup entry numbers. */
+  L3EntryNo = (((uint64_t) virtualAddr) >> 12) & 0x1FF;
+  L2EntryNo = (((uint64_t) virtualAddr) >> 21) & 0x1FF;
+  L1EntryNo = (((uint64_t) virtualAddr) >> 30) & 0x1FF;
+  L0EntryNo = (((uint64_t) virtualAddr) >> 39) & 0x1FF;
+
+  /* Setup invalidEntry structure. */
+  invalidEntry->VALID   = IS_INVALID;
+  invalidEntry->IGNORED = 0;
+
+  /* Start from L0Table (KernelPortTTB1). */
+  L0Table = KernelPortTTB1;
+
+  /* Read current descriptor at L0Table[L0EntryNo]. */
+  tableEntryValue = L0Table[L0EntryNo];
+
+  /* Descriptor is already in use? */
+  if (tableEntry->VALID == 0)
+  {
+    /* Allocate new L1Table. */
+    L1Table = KernelMemoryPageAllocate();
+
+    /* Out of memory? */
+    if (L1Table == NULL)
+    {
+      return NULL;
+    }
+
+    /* Clean up the new table. */
+    for (i = 0; i < ENTRY_COUNT; i++)
+    {
+      L1Table[i] = invalidEntryValue;
+    }
+
+    /* Setup tableEntry. */
+    tableEntry->VALID          = IS_VALID;
+    tableEntry->TYPE           = TYPE_TABLE;
+    tableEntry->IGNORED0       = 0;
+    tableEntry->RESV           = 0;
+    tableEntry->IGNORED1       = 0;
+    tableEntry->PXN            = PXN_PERMIT_EXEC;
+    tableEntry->UXN            = 0;
+    tableEntry->ADDR           = TO_TBL_ADDR(L1Table);
+    tableEntry->AP             = AP_RW_RW;
+    tableEntry->NS             = NS_SECURE;
+
+    /* Store the new entry. */
+    L0Table[L0EntryNo] = tableEntryValue;
+  }
+  else
+  {
+    /* Use the current L1Table. */
+    L1Table = FROM_TBL_ADDR(tableEntry->ADDR);
+  }
+
+  /* Read current descriptor at L1Table[L1EntryNo]. */
+  tableEntryValue = L1Table[L1EntryNo];
+
+  /* Descriptor is already in use? */
+  if (tableEntry->VALID == 0)
+  {
+    /* Allocate new L2Table. */
+    L2Table = KernelMemoryPageAllocate();
+
+    /* Out of memory? */
+    if (L2Table == NULL)
+    {
+      return NULL;
+    }
+
+    /* Clean up the new table. */
+    for (i = 0; i < ENTRY_COUNT; i++)
+    {
+      L2Table[i] = invalidEntryValue;
+    }
+
+    /* Setup tableEntry. */
+    tableEntry->VALID          = IS_VALID;
+    tableEntry->TYPE           = TYPE_TABLE;
+    tableEntry->IGNORED0       = 0;
+    tableEntry->RESV           = 0;
+    tableEntry->IGNORED1       = 0;
+    tableEntry->PXN            = PXN_PERMIT_EXEC;
+    tableEntry->UXN            = 0;
+    tableEntry->ADDR           = TO_TBL_ADDR(L2Table);
+    tableEntry->AP             = AP_RW_RW;
+    tableEntry->NS             = NS_SECURE;
+
+    /* Store the new entry. */
+    L1Table[L1EntryNo] = tableEntryValue;
+
+    /* Increase L1Table counter in L0Table */
+    tableEntryValue = L0Table[L0EntryNo];
+    tableEntry->IGNORED0++;
+    L0Table[L0EntryNo] = tableEntryValue;
+  }
+  else
+  {
+    /* Use the current L2Table. */
+    L2Table = FROM_TBL_ADDR(tableEntry->ADDR);
+  }
+
+  /* Read current descriptor at L2Table[L2EntryNo]. */
+  tableEntryValue = L2Table[L2EntryNo];
+
+  /* Descriptor is already in use? */
+  if (tableEntry->VALID == 0)
+  {
+    /* Allocate new L3Table. */
+    L3Table = KernelMemoryPageAllocate();
+
+    /* Out of memory? */
+    if (L3Table == NULL)
+    {
+      return NULL;
+    }
+
+    /* Clean up the new table. */
+    for (i = 0; i < ENTRY_COUNT; i++)
+    {
+      L3Table[i] = invalidEntryValue;
+    }
+
+    /* Setup tableEntry. */
+    tableEntry->VALID          = IS_VALID;
+    tableEntry->TYPE           = TYPE_TABLE;
+    tableEntry->IGNORED0       = 0;
+    tableEntry->RESV           = 0;
+    tableEntry->IGNORED1       = 0;
+    tableEntry->PXN            = PXN_PERMIT_EXEC;
+    tableEntry->UXN            = 0;
+    tableEntry->ADDR           = TO_TBL_ADDR(L3Table);
+    tableEntry->AP             = AP_RW_RW;
+    tableEntry->NS             = NS_SECURE;
+
+    /* Store the new entry. */
+    L2Table[L2EntryNo] = tableEntryValue;
+
+    /* Increase L2Table counter in L1Table. */
+    tableEntryValue = L1Table[L1EntryNo];
+    tableEntry->IGNORED0++;
+    L1Table[L1EntryNo] = tableEntryValue;
+  }
+  else
+  {
+    /* Use the current L3Table. */
+    L3Table = FROM_TBL_ADDR(tableEntry->ADDR);
+  }
+
+  /* Read current descriptor at L3Table[L3EntryNo]. */
+  pageEntryValue = L3Table[L3EntryNo];
+
+  /* Descriptor is already in use? */
+  if (pageEntry->VALID == 0)
+  {
+
+    /* Setup pageEntry. */
+    pageEntry->VALID           = IS_VALID;
+    pageEntry->TYPE            = TYPE_PAGE;
+    pageEntry->ATTRIDX         = 0;
+    pageEntry->NS              = NS_SECURE;
+    pageEntry->AP              = AP_RW_RW;
+    pageEntry->SH              = SH_INNER_SHAREABLE;
+    pageEntry->AF              = AF_ACCESSABLE;
+    pageEntry->NG              = NG_NON_GLOBAL;
+    pageEntry->RESV0           = 0;
+    pageEntry->CONT            = CONT_DISABLE;
+    pageEntry->PXN             = PXN_PERMIT_EXEC;
+    pageEntry->UXN             = 0;
+    pageEntry->ADDR            = TO_PAG_ADDR(physicalAddr);
+    pageEntry->IGNORED         = 0;
+
+    /* Store the new entry. */
+    L3Table[L3EntryNo]         = pageEntryValue;
+
+    /* Increase L3Table counter in L2Table. */
+    tableEntryValue = L2Table[L2EntryNo];
+    tableEntry->IGNORED0++;
+    L2Table[L2EntryNo] = tableEntryValue;
+  }
+  else
+  {
+    /* The page is already mapped. */
+    physicalAddr = FROM_PAG_ADDR(pageEntry->ADDR);
+  }
+
+  /* Done. */
+  return physicalAddr;
+}
+
+/*****************************************************************************
+ *                        KernelPortPageGetMap()
+ ****************************************************************************/
+
+void *KernelPortGetMap(void *virtualAddr)
+{
+  /* Descriptors as integers. */
+  uint64_t    tableEntryValue   = 0;
+  uint64_t    pageEntryValue    = 0;
+
+  /* Descriptors as structs. */
+  TBLENTRY_t *tableEntry        = NULL;
+  PAGENTRY_t *pageEntry         = NULL;
+
+  /* Table entry numbers. */
+  uint64_t    L0EntryNo         = 0;
+  uint64_t    L1EntryNo         = 0;
+  uint64_t    L2EntryNo         = 0;
+  uint64_t    L3EntryNo         = 0;
+
+  /* Table pointers. */
+  uint64_t   *L0Table           = NULL;
+  uint64_t   *L1Table           = NULL;
+  uint64_t   *L2Table           = NULL;
+  uint64_t   *L3Table           = NULL;
+
+  /* The mapped page that will be returned. */
+  void       *physicalAddr      = NULL;
+
+  /* Setup pointers. */
+  tableEntry   = (TBLENTRY_t *) &tableEntryValue;
+  pageEntry    = (PAGENTRY_t *) &pageEntryValue;
+
+  /* Setup entry numbers. */
+  L3EntryNo = (((uint64_t) virtualAddr) >> 12) & 0x1FF;
+  L2EntryNo = (((uint64_t) virtualAddr) >> 21) & 0x1FF;
+  L1EntryNo = (((uint64_t) virtualAddr) >> 30) & 0x1FF;
+  L0EntryNo = (((uint64_t) virtualAddr) >> 39) & 0x1FF;
+
+  /* Start from L0Table (KernelPortTTB1). */
+  L0Table = KernelPortTTB1;
+
+  /* Read current descriptor at L0Table[L0EntryNo]. */
+  tableEntryValue = L0Table[L0EntryNo];
+
+  /* L1Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L1Table pointer. */
+  L1Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L1Table[L1EntryNo]. */
+  tableEntryValue = L1Table[L1EntryNo];
+
+  /* L2Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L2Table pointer. */
+  L2Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L2Table[L2EntryNo]. */
+  tableEntryValue = L2Table[L2EntryNo];
+
+  /* L3Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L3Table pointer. */
+  L3Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L3Table[L3EntryNo]. */
+  pageEntryValue = L3Table[L3EntryNo];
+
+  /* The mapping doesn't even exist? */
+  if(pageEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Load the physical address of the mapped page. */
+  physicalAddr = FROM_PAG_ADDR(pageEntry->ADDR);
+
+  /* Done. */
+  return physicalAddr;
+}
+
+/*****************************************************************************
+ *                       KernelPortPageDelMap()
+ ****************************************************************************/
+
+void *KernelPortDelMap(void *virtualAddr)
+{
+  /* Descriptors as integers. */
+  uint64_t    invalidEntryValue = 0;
+  uint64_t    tableEntryValue   = 0;
+  uint64_t    pageEntryValue    = 0;
+
+  /* Descriptors as structs. */
+  INVENTRY_t *invalidEntry      = NULL;
+  TBLENTRY_t *tableEntry        = NULL;
+  PAGENTRY_t *pageEntry         = NULL;
+
+  /* Table entry numbers. */
+  uint64_t    L0EntryNo         = 0;
+  uint64_t    L1EntryNo         = 0;
+  uint64_t    L2EntryNo         = 0;
+  uint64_t    L3EntryNo         = 0;
+
+  /* Table pointers. */
+  uint64_t   *L0Table           = NULL;
+  uint64_t   *L1Table           = NULL;
+  uint64_t   *L2Table           = NULL;
+  uint64_t   *L3Table           = NULL;
+
+  /* The mapped page that will be removed. */
+  void       *physicalAddr      = NULL;
+
+  /* Setup pointers. */
+  invalidEntry = (INVENTRY_t *) &invalidEntryValue;
+  tableEntry   = (TBLENTRY_t *) &tableEntryValue;
+  pageEntry    = (PAGENTRY_t *) &pageEntryValue;
+
+  /* Setup entry numbers. */
+  L3EntryNo = (((uint64_t) virtualAddr) >> 12) & 0x1FF;
+  L2EntryNo = (((uint64_t) virtualAddr) >> 21) & 0x1FF;
+  L1EntryNo = (((uint64_t) virtualAddr) >> 30) & 0x1FF;
+  L0EntryNo = (((uint64_t) virtualAddr) >> 39) & 0x1FF;
+
+  /* Setup invalidEntry pointer. */
+  invalidEntry->VALID   = IS_INVALID;
+  invalidEntry->IGNORED = 0;
+
+  /* Start from L0Table (KernelPortTTB1). */
+  L0Table = KernelPortTTB1;
+
+  /* Read current descriptor at L0Table[L0EntryNo]. */
+  tableEntryValue = L0Table[L0EntryNo];
+
+  /* L1Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L1Table pointer. */
+  L1Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L1Table[L1EntryNo]. */
+  tableEntryValue = L1Table[L1EntryNo];
+
+  /* L2Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L2Table pointer. */
+  L2Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L2Table[L2EntryNo]. */
+  tableEntryValue = L2Table[L2EntryNo];
+
+  /* L3Table doesn't even exist? */
+  if(tableEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Obtain L3Table pointer. */
+  L3Table = FROM_TBL_ADDR(tableEntry->ADDR);
+
+  /* Read current descriptor at L3Table[L3EntryNo]. */
+  pageEntryValue = L3Table[L3EntryNo];
+
+  /* The mapping doesn't even exist? */
+  if(pageEntry->VALID == IS_INVALID)
+  {
+    /* Page is not mapped. */
+    return NULL;
+  }
+
+  /* Load the physical address of the mapped page. */
+  physicalAddr = FROM_PAG_ADDR(pageEntry->ADDR);
+
+  /* Mark the descriptor in L3Table as invalid. */
+  L3Table[L3EntryNo]    = invalidEntryValue;
+
+  /* Decrease L3Table counter in L2Table. */
+  tableEntryValue = L2Table[L2EntryNo];
+  tableEntry->IGNORED0--;
+  L2Table[L2EntryNo] = tableEntryValue;
+
+  /* Is L3Table still has entries? */
+  if (tableEntry->IGNORED0 != 0)
+  {
+    /* Done. */
+    return physicalAddr;
+  }
+
+  /* Deallocate L3Table. */
+  KernelMemoryPageDeallocate(L3Table);
+
+  /* Mark the descriptor in L2Table as invalid. */
+  L2Table[L2EntryNo] = invalidEntryValue;
+
+  /* Decrease L2Table counter in L1Table. */
+  tableEntryValue = L1Table[L1EntryNo];
+  tableEntry->IGNORED0--;
+  L1Table[L1EntryNo] = tableEntryValue;
+
+  /* L2Table still has entries? */
+  if (tableEntry->IGNORED0 != 0)
+  {
+    /* Done. */
+    return physicalAddr;
+  }
+
+  /* Deallocate L2Table. */
+  KernelMemoryPageDeallocate(L2Table);
+
+  /* Mark the descriptor in L1Table as invalid. */
+  L1Table[L1EntryNo] = invalidEntryValue;
+
+  /* Decrease L1Table counter in L0Table. */
+  tableEntryValue = L0Table[L0EntryNo];
+  tableEntry->IGNORED0 --;
+  L0Table[L0EntryNo] = tableEntryValue;
+
+  /* L1Table still has entries? */
+  if (tableEntry->IGNORED0 != 0)
+  {
+    /* Done. */
+    return physicalAddr;
+  }
+
+  /* Deallocate L1Table. */
+  KernelMemoryPageDeallocate(L1Table);
+
+  /* Mark the descriptor in L0Table as invalid. */
+  L0Table[L0EntryNo] = invalidEntryValue;
+
+  /* Done. */
+  return physicalAddr;
+}
+
+/*****************************************************************************
  *                       KernelPortMemoryInitialize()
  ****************************************************************************/
 
@@ -655,3 +1146,4 @@ void KernelPortMemoryInitialize (void)
   /* Done. */
   KernelDebugPrintFmt("Memory initialized successfully!\n");
 }
+
