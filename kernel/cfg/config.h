@@ -37,22 +37,22 @@
  ****************************************************************************/
 
 /* RAM start address (if not overwritten by bootloader). */
-#define KERNEL_CONFIG_RAM_START      0
+#define KERNEL_CONFIG_RAM_START           0
 
 /* RAM end address (if not overwritten by bootloader). */
-#define KERNEL_CONFIG_RAM_END        0
+#define KERNEL_CONFIG_RAM_END             0
 
 /* Maximum number of CPUs to support */
-#define KERNEL_CONFIG_MAX_CPU_COUNT  16
+#define KERNEL_CONFIG_MAX_CPU_COUNT       16
 
 /* Maximum prioirty (e.g. 64 means 1..63 are valid priorities). */
-#define KERNEL_CONFIG_MAX_PRIOIRTY   64
+#define KERNEL_CONFIG_MAX_PRIOIRTY        64
 
 /* Thread/process name maximum size. */
-#define KERNEL_CONFIG_NAME_MAX_SIZE  32
+#define KERNEL_CONFIG_NAME_MAX_SIZE       32
 
-/* Stack maximum size. */
-#define KERNEL_CONFIG_STACK_MAXSIZE  0x2000
+/* Stack default size. */
+#define KERNEL_CONFIG_DEFAULT_STACK_SIZE  0x2000
 
 /*****************************************************************************
  *                            END OF HEADER

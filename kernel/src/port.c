@@ -221,26 +221,26 @@
  ****************************************************************************/
 
 /* Private memory zone. */
-#define PRIMEM_ZONE_START       (0xFFFF000000000000)
-#define PRIMEM_ZONE_END         (0xFFFF3FFFFFFFFFFF)
+#define PRIMEM_ZONE_START       (0xFFFF000000000000UL)
+#define PRIMEM_ZONE_END         (0xFFFF3FFFFFFFFFFFUL)
 #define PRIMEM_ZONE_SLOTS       (64*1024)
 #define PRIMEM_ZONE_SLOT_SIZE   (0x40000000UL)
 
 /* Shared memory zone. */
-#define SHMEM_ZONE_START        (0xFFFF400000000000)
-#define SHMEM_ZONE_END          (0xFFFF7FFFFFFFFFFF)
+#define SHMEM_ZONE_START        (0xFFFF400000000000UL)
+#define SHMEM_ZONE_END          (0xFFFF7FFFFFFFFFFFUL)
 #define SHMEM_ZONE_SLOTS        (64*1024)
 #define SHMEM_ZONE_SLOT_SIZE    (0x40000000UL)
 
 /* Reserved zone. */
-#define RESERVED_ZONE_START     (0xFFFF80000000000)
-#define RESERVED_ZONE_END       (0xFFFFBFFFFFFFFFF)
+#define RESERVED_ZONE_START     (0xFFFF80000000000UL)
+#define RESERVED_ZONE_END       (0xFFFFBFFFFFFFFFFUL)
 #define RESERVED_ZONE_SLOTS     (64*1024)
 #define RESERVED_ZONE_SLOT_SIZE (0x40000000UL)
 
 /* Stack zone. */
-#define STACK_ZONE_START        (0xFFFFCFFFFFFFFFF)
-#define STACK_ZONE_END          (0xFFFFFFFFFFFFFFF)
+#define STACK_ZONE_START        (0xFFFFC0000000000UL)
+#define STACK_ZONE_END          (0xFFFFFFFFFFFFFFFUL)
 #define STACK_ZONE_SLOTS        (64*1024)
 #define STACK_ZONE_SLOT_SIZE    (0x40000000UL)
 
@@ -249,8 +249,8 @@
  ****************************************************************************/
 
 /* Thread/process maximum count. */
-#define PROCESS_COUNT        (128)
-#define THREAD_COUNT         (128)
+#define PROCESS_COUNT        (PRIMEM_ZONE_SLOTS)
+#define THREAD_COUNT         (STACK_ZONE_SLOTS)
 
 /*****************************************************************************
  *                              TYPEDEFS
@@ -360,15 +360,19 @@ typedef struct SCTLR
 /* Process structure. */
 typedef struct port_process
 {
-  process_t processData;
-  uint8_t   used;
+  process_t            processData;
+  uint64_t             processId;
+  uint64_t             isUsed;
+  struct port_process *nextFreeProcess;
 } __attribute__((packed)) port_process_t;
 
 /* Thread structure. */
 typedef struct port_thread
 {
-  thread_t threadData;
-  uint8_t  used;
+  thread_t            threadData;
+  uint64_t            threadId;
+  uint64_t            isUsed;
+  struct port_thread *nextFreeThread;
 } __attribute__((packed)) port_thread_t;
 
 /*****************************************************************************
@@ -382,11 +386,17 @@ static uint64_t KernelPortTTB1[ENTRY_COUNT] TBL_ALIGN;
 /* TTB0 L1 page tables */
 static uint64_t KernelPortTTB0L1[TTB0_L1_COUNT][ENTRY_COUNT] TBL_ALIGN;
 
+static port_process_t *KernelPortProcessFreeHead;
+static port_process_t *KernelPortProcessFreeTail;
+
 /* Process data structures. */
 static port_process_t KernelPortProcessList[PROCESS_COUNT];
 
 /* Thread data structures. */
-static port_thread_t  KernelPortThreadList [THREAD_COUNT ];
+static port_thread_t  KernelPortThreadList[THREAD_COUNT];
+
+static port_thread_t *KernelPortThreadFreeHead;
+static port_thread_t *KernelPortThreadFreeTail;
 
 /*****************************************************************************
  *                    KernelPortSerialInitialize()
@@ -1278,37 +1288,245 @@ void *KernelPortTranslationDel (void *virtualAddr)
 }
 
 /*****************************************************************************
- *                  KernelPortThreadInitialize()
- ****************************************************************************/
-
-void KernelPortThreadInitialize (void)
-{
-  /* Loop counter. */
-  uint64_t  curThread = 0;
-
-  //thread_t  thread_listp[THREAD_COUNT];
-
-  /* Initialize thread list. */
-  for (curThread = 0; curThread < THREAD_COUNT; curThread++)
-  {
-    KernelPortThreadList[curThread].used = 0;
-  }
-}
-
-/*****************************************************************************
- *                  KernelPortProcessInitialize()
+ *                     KernelPortProcessInitialize()
  ****************************************************************************/
 
 void KernelPortProcessInitialize (void)
 {
+  /* Pointer to next free process. */
+  port_process_t *nextFreeProcess = NULL;
+
   /* Loop counter. */
-  uint64_t  curProcess = 0;
+  uint64_t        curProcess      = 0;
 
-  //process_t process_list[PROCESS_COUNT];
+  /* Initialize head and tail for process list. */
+  KernelPortProcessFreeHead = &KernelPortProcessList[0];
+  KernelPortProcessFreeTail = &KernelPortProcessList[PROCESS_COUNT - 1];
 
-  /* Initialize thread list. */
+  /* Initialize process list. */
   for (curProcess = 0; curProcess < PROCESS_COUNT; curProcess++)
   {
-    KernelPortProcessList[curProcess].used = 0;
+    /* Compute pointer to next process. */
+    if(curProcess == PROCESS_COUNT - 1)
+    {
+      nextFreeProcess = NULL;
+    }
+    else
+    {
+      nextFreeProcess = &KernelPortProcessList[curProcess + 1];
+    }
+
+    /* Initialize process structure. */
+    KernelPortProcessList[curProcess].processId       = curProcess;
+    KernelPortProcessList[curProcess].isUsed          = 0;
+    KernelPortProcessList[curProcess].nextFreeProcess = nextFreeProcess;
   }
+}
+
+/*****************************************************************************
+ *                      KernelPortProcessAllocate()
+ ****************************************************************************/
+
+process_t *KernelPortProcessAllocate (void)
+{
+  /* Pointer to process structure (port point of view). */
+  port_process_t *portProcess;
+
+  /* Check if there is no free process. */
+  if(KernelPortProcessFreeHead == NULL)
+  {
+    return NULL;
+  }
+
+  /* Allocate new process from head. */
+  portProcess = KernelPortProcessFreeHead;
+  KernelPortProcessFreeHead = portProcess->nextFreeProcess;
+
+  /* Initialize the new process. */
+  portProcess->isUsed          = 1;
+  portProcess->nextFreeProcess = NULL;
+
+  /* Done. */
+  return &portProcess->processData;
+}
+
+/*****************************************************************************
+ *                     KernelPortProcessDeallocate()
+ ****************************************************************************/
+
+void KernelPortProcessDeallocate (process_t *process)
+{
+  /* Pointer to process structure (port point of view). */
+  port_process_t *portProcess;
+
+  /* Convert process into port process. */
+  portProcess = (port_process_t *) process;
+
+  /* Free up the process. */
+  portProcess->isUsed          = 0;
+  portProcess->nextFreeProcess = NULL;
+
+  /* Update the tail of the process list. */
+  KernelPortProcessFreeTail->nextFreeProcess = portProcess;
+  KernelPortProcessFreeTail                  = portProcess;
+}
+
+/*****************************************************************************
+ *                        KernelPortProcessGet()
+ ****************************************************************************/
+
+process_t *KernelPortProcessGet (uint64_t processId)
+{
+  /* Pointer to process structure (port point of view). */
+  port_process_t *portProcess;
+
+  /* Obtain process structure by id. */
+  portProcess = &KernelPortProcessList[processId];
+
+  /* Check whether the process is used or not. */
+  if(portProcess->isUsed == 0)
+  {
+    return NULL;
+  }
+
+  /* Done. */
+  return &portProcess->processData;
+}
+
+/*****************************************************************************
+ *                         KernelPortProcessId()
+ ****************************************************************************/
+
+uint64_t KernelPortProcessId (process_t *process)
+{
+  /* Pointer to process structure (port point of view). */
+  port_process_t *portProcess;
+
+  /* Convert process_t into port_process_t. */
+  portProcess = (port_process_t *) process;
+
+  /* Done. */
+  return portProcess->processId;
+}
+
+/*****************************************************************************
+ *                      KernelPortThreadInitialize()
+ ****************************************************************************/
+
+void KernelPortThreadInitialize (void)
+{
+  /* Pointer to next free thread. */
+  port_thread_t *nextFreeThread = NULL;
+
+  /* Loop counter. */
+  uint64_t       curThread      = 0;
+
+  /* Initialize head and tail for thread list. */
+  KernelPortThreadFreeHead = &KernelPortThreadList[0];
+  KernelPortThreadFreeTail = &KernelPortThreadList[THREAD_COUNT - 1];
+
+  /* Initialize thread list. */
+  for (curThread = 0; curThread < THREAD_COUNT; curThread++)
+  {
+    /* Compute pointer to next free thread. */
+    if(curThread == THREAD_COUNT - 1)
+    {
+      nextFreeThread = NULL;
+    }
+    else
+    {
+      nextFreeThread = &KernelPortThreadList[curThread + 1];
+    }
+
+    /* Initialize thread structure. */
+    KernelPortThreadList[curThread].threadId       = curThread;
+    KernelPortThreadList[curThread].isUsed         = 0;
+    KernelPortThreadList[curThread].nextFreeThread = nextFreeThread;
+  }
+}
+
+/*****************************************************************************
+ *                       KernelPortThreadAllocate()
+ ****************************************************************************/
+
+thread_t *KernelPortThreadAllocate (void)
+{
+  /* Pointer to thread structure (port point of view). */
+  port_thread_t *portThread = NULL;
+
+  /* Check if there is no free thread. */
+  if(KernelPortThreadFreeHead == NULL)
+  {
+    return NULL;
+  }
+
+  /* Allocate new thread from head. */
+  portThread = KernelPortThreadFreeHead;
+  KernelPortThreadFreeHead = portThread->nextFreeThread;
+
+  /* Initialize the new thread. */
+  portThread->isUsed         = 1;
+  portThread->nextFreeThread = NULL;
+
+  /* Done. */
+  return &portThread->threadData;
+}
+
+/*****************************************************************************
+ *                      KernelPortThreadDeallocate()
+ ****************************************************************************/
+
+void KernelPortThreadDeallocate (thread_t *thread)
+{
+  /* Pointer to thread structure (port point of view). */
+  port_thread_t *portThread = NULL;
+
+  /* Convert thread into port thread. */
+  portThread = (port_thread_t *) thread;
+
+  /* Free up the thread. */
+  portThread->isUsed         = 0;
+  portThread->nextFreeThread = NULL;
+
+  /* Update the tail of the thread list. */
+  KernelPortThreadFreeTail->nextFreeThread = portThread;
+  KernelPortThreadFreeTail                 = portThread;
+}
+
+/*****************************************************************************
+ *                          KernelPortThreadGet()
+ ****************************************************************************/
+
+thread_t *KernelPortThreadGet (uint64_t threadId)
+{
+  /* Pointer to thread structure (port point of view). */
+  port_thread_t *portThread = NULL;
+
+  /* Obtain the thread structure by Id. */
+  portThread = &KernelPortThreadList[threadId];
+
+  /* Check whether current thread is already allocated or not. */
+  if(portThread->isUsed == 0)
+  {
+    return NULL;
+  }
+
+  /* Done. */
+  return &portThread->threadData;
+}
+
+/*****************************************************************************
+ *                          KernelPortThreadId()
+ ****************************************************************************/
+
+uint64_t KernelPortThreadId (thread_t *thread)
+{
+  /* Pointer to thread structure (port point of view). */
+  port_thread_t *portThread = NULL;
+
+  /* Convert thread_t into port_thread_t. */
+  portThread = (port_thread_t *) thread;
+
+  /* Done. */
+  return portThread->threadId;
 }

@@ -46,14 +46,12 @@
 /* Port-specific process struct should include process_t at the start. */
 typedef struct process
 {
-  uint64_t       process_id;
   uint8_t        name[KERNEL_CONFIG_NAME_MAX_SIZE];
 } __attribute__((packed)) process_t;
 
 /* Port-specific thread struct should include thread_t at the start. */
 typedef struct thread
 {
-  uint64_t       id;
   uint8_t        name[KERNEL_CONFIG_NAME_MAX_SIZE];
   struct thread *nextReadyThread;
 } __attribute__((packed)) thread_t;
@@ -74,10 +72,18 @@ void *KernelPortTranslationGet(void *virtualAddr);
 void *KernelPortTranslationDel(void *virtualAddr);
 
 /* CPU-Specific Process Handling. */
-void KernelPortProcessInitialize(void);
+void       KernelPortProcessInitialize(void);
+process_t *KernelPortProcessAllocate(void);
+void       KernelPortProcessDeallocate(process_t *process);
+process_t *KernelPortProcessGet(uint64_t processId);
+uint64_t   KernelPortProcessId(process_t *process);
 
 /* CPU-Specific Thread Handling. */
-void KernelPortThreadInitialize(void);
+void      KernelPortThreadInitialize(void);
+thread_t *KernelPortThreadAllocate(void);
+void      KernelPortThreadDeallocate(thread_t *thread);
+thread_t *KernelPortThreadGet(uint64_t threadId);
+uint64_t  KernelPortThreadId(thread_t *thread);
 
 /*****************************************************************************
  *                            END OF HEADER
