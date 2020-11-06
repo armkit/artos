@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/cfg/config.h
- * @brief  Kernel config header file.
+ * @file   kernel/src/thread.c
+ * @brief  ARTOS kernel thread-management module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,33 +26,43 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                             SAFE GUARD
+ *                              INCLUDES
  ****************************************************************************/
 
-#ifndef KERNEL_CONFIG_H
-#define KERNEL_CONFIG_H
+/* Kernel includes. */
+#include "kernel/inc/interface.h"
+#include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                              DEFINES
+ *                               MACROS
  ****************************************************************************/
 
-/* RAM start address (if not overwritten by bootloader). */
-#define KERNEL_CONFIG_RAM_START      0
-
-/* RAM end address (if not overwritten by bootloader). */
-#define KERNEL_CONFIG_RAM_END        0
-
-/* Maximum number of CPUs to support */
-#define KERNEL_CONFIG_MAX_CPU_COUNT  16
-
-/* Maximum prioirty (e.g. 64 means 1..63 are valid priorities). */
-#define KERNEL_CONFIG_MAX_PRIOIRTY   64
-
-/* Thread/process name maximum size. */
-#define KERNEL_CONFIG_NAME_MAX_SIZE  32
+/* Maximum CPU count and priorities. */
+#define MAX_CPU          (KERNEL_CONFIG_MAX_CPU_COUNT)
+#define MAX_PRIORITY     (KERNEL_CONFIG_MAX_PRIOIRTY )
 
 /*****************************************************************************
- *                            END OF HEADER
+ *                           STATIC VARIABLES
  ****************************************************************************/
 
-#endif /* KERNEL_CONFIG_H */
+static thread_t *KernelThreadsReadyQueue[MAX_CPU][MAX_PRIORITY];
+
+/*****************************************************************************
+ *                       KernelThreadInitialize()
+ ****************************************************************************/
+
+void KernelThreadInitialize(void)
+{
+  /* Loop counters. */
+  uint64_t curCPU      = 0;
+  uint64_t curPriority = 0;
+
+  /* Initialize Ready Queue. */
+  for (curCPU = 0; curCPU < MAX_CPU; curCPU++)
+  {
+    for (curPriority = 0; curPriority < MAX_PRIORITY; curPriority++)
+    {
+      KernelThreadsReadyQueue[curCPU][curPriority] = NULL;
+    }
+  }
+}

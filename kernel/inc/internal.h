@@ -40,11 +40,44 @@
 #include "kernel/inc/interface.h"
 
 /*****************************************************************************
+ *                              TYPEDEFS
+ ****************************************************************************/
+
+/* Port-specific process struct should include process_t at the start. */
+typedef struct process
+{
+  uint64_t       process_id;
+  uint8_t        name[KERNEL_CONFIG_NAME_MAX_SIZE];
+} __attribute__((packed)) process_t;
+
+/* Port-specific thread struct should include thread_t at the start. */
+typedef struct thread
+{
+  uint64_t       id;
+  uint8_t        name[KERNEL_CONFIG_NAME_MAX_SIZE];
+  struct thread *nextReadyThread;
+} __attribute__((packed)) thread_t;
+
+/*****************************************************************************
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void KernelSerialPut(char c);
-void KernelPortMemoryInitialize(void);
+/* CPU-Specific Serial I/O. */
+void KernelPortSerialInitialize(void);
+void KernelPortSerialPut(char c);
+char KernelPortSerialGet(void);
+
+/* CPU-Specific Address Translation. */
+void  KernelPortTranslationInitialize(void);
+void *KernelPortTranslationSet(void *virtualAddr, void *physicalAddr);
+void *KernelPortTranslationGet(void *virtualAddr);
+void *KernelPortTranslationDel(void *virtualAddr);
+
+/* CPU-Specific Process Handling. */
+void KernelPortProcessInitialize(void);
+
+/* CPU-Specific Thread Handling. */
+void KernelPortThreadInitialize(void);
 
 /*****************************************************************************
  *                            END OF HEADER

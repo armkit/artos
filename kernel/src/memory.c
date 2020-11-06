@@ -5,7 +5,7 @@
  *
  ***************************************************************************
  * @file   kernel/src/memory.c
- * @brief  ARTOS kernel memory module.
+ * @brief  ARTOS kernel memory-management module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -68,9 +68,6 @@ void KernelMemoryInitialize(void)
   /* Initialize linkedlist. */
   KernelMemoryFreeHead->next = NULL;
   KernelMemoryFreeHead->size = KernelMemoryRamEnd - KernelMemoryRamStart;
-
-  /* Initialize port-specific memory stuff. */
-  KernelPortMemoryInitialize();
 }
 
 /*****************************************************************************

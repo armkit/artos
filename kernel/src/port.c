@@ -44,6 +44,46 @@
 #define MRS(var, sys_reg) __asm__("MRS %0, " #sys_reg : "=r"(var));
 
 /*****************************************************************************
+ *                             UART MACROS
+ ****************************************************************************/
+
+/* PL011 registers */
+#define UARTDR            (*((volatile unsigned short *) 0x09000000))
+#define UARTRSR           (*((volatile unsigned short *) 0x09000004))
+#define UARTECR           (*((volatile unsigned short *) 0x09000004))
+#define UARTFR            (*((volatile unsigned short *) 0x09000018))
+#define UARTILPR          (*((volatile unsigned short *) 0x09000020))
+#define UARTIBRD          (*((volatile unsigned short *) 0x09000024))
+#define UARTFBRD          (*((volatile unsigned short *) 0x09000028))
+#define UARTFLCR_H        (*((volatile unsigned short *) 0x0900002C))
+#define UARTCR            (*((volatile unsigned short *) 0x09000030))
+
+/* UARTFR flags */
+#define CTS               (0x0001)
+#define DSR               (0x0002)
+#define DCD               (0x0004)
+#define BUSY              (0x0008)
+#define RXFE              (0x0010)
+#define TXFF              (0x0020)
+#define RXFF              (0x0040)
+#define TXFE              (0x0080)
+#define RI                (0x0100)
+
+/* UARTCR flags */
+#define UARTEN            (0x0001)
+#define SIREN             (0x0002)
+#define SIRLP             (0x0004)
+#define LBE               (0x0080)
+#define TXE               (0x0100)
+#define RXE               (0x0200)
+#define DTR               (0x0400)
+#define RTS               (0x0800)
+#define Out1              (0x1000)
+#define Out2              (0x2000)
+#define RTSEn             (0x4000)
+#define CTSEn             (0x8000)
+
+/*****************************************************************************
  *                              TCR MACROS
  ****************************************************************************/
 
@@ -99,7 +139,6 @@
 #define TBI_T0P_BYTE_USED       0
 #define TBI_T0P_BYTE_IGNORED    1
 
-
 /*****************************************************************************
  *                            SCTLR MACROS
  ****************************************************************************/
@@ -113,10 +152,22 @@
  ****************************************************************************/
 
 /* Maximum possible physical address (max. is 0x0000FFFFFFFFFFFFUL). */
-#define LAST_PHYSICAL_ADDRESS   0x0000007FFFFFFFFFUL
+#define LAST_PHYSICAL_ADDR   0x0000007FFFFFFFFFUL
 
 /* Table size. */
-#define ENTRY_COUNT             512
+#define ENTRY_COUNT          512
+
+/* Levels of memory */
+#define L0_SIZE              (1UL<<48)
+#define L1_SIZE              (1UL<<39)
+#define L2_SIZE              (1UL<<30)
+#define L3_SIZE              (1UL<<21)
+
+/* How many L1 tables needed for TTB0. */
+#define TTB0_L1_COUNT        ((LAST_PHYSICAL_ADDR+L1_SIZE)/L1_SIZE)
+
+/* Alignment of L0/L1 tables. */
+#define TBL_ALIGN             __attribute__((aligned(PAGE_SIZE)))
 
 /* Convert 64-bit VA into address bits. */
 #define TO_BLK_ADDR(PTR)     ((((uint64_t)PTR)>>30)&((1UL<<18)-1))
@@ -164,6 +215,14 @@
 /* .PXN field specification.*/
 #define PXN_PERMIT_EXEC         0
 #define PXN_NOT_PERMIT_EXEC     1
+
+/*****************************************************************************
+ *                           RESOURCES MACROS
+ ****************************************************************************/
+
+/* Thread/process maximum count. */
+#define PROCESS_COUNT        (128)
+#define THREAD_COUNT         (128)
 
 /*****************************************************************************
  *                              TYPEDEFS
@@ -270,19 +329,77 @@ typedef struct SCTLR
   unsigned long RESV           :63;
 } __attribute__((packed)) SCTLR_t;
 
+/* Process structure. */
+typedef struct port_process
+{
+  process_t processData;
+  uint8_t   used;
+} __attribute__((packed)) port_process_t;
+
+/* Thread structure. */
+typedef struct port_thread
+{
+  thread_t threadData;
+  uint8_t  used;
+} __attribute__((packed)) port_thread_t;
 
 /*****************************************************************************
  *                           STATIC VARIABLES
  ****************************************************************************/
 
-static void *KernelPortTTB0 = NULL;
-static void *KernelPortTTB1 = NULL;
+/* TTB0/TTB1 L0 page tables. */
+static uint64_t KernelPortTTB0[ENTRY_COUNT] TBL_ALIGN;
+static uint64_t KernelPortTTB1[ENTRY_COUNT] TBL_ALIGN;
+
+/* TTB0 L1 page tables */
+static uint64_t KernelPortTTB0L1[TTB0_L1_COUNT][ENTRY_COUNT] TBL_ALIGN;
+
+/* Process data structures. */
+static port_process_t KernelPortProcessList[PROCESS_COUNT];
+
+/* Thread data structures. */
+static port_thread_t  KernelPortThreadList [THREAD_COUNT ];
+
+/*****************************************************************************
+ *                    KernelPortSerialInitialize()
+ ****************************************************************************/
+
+void KernelPortSerialInitialize (void)
+{
+  /* Do nothing. */
+}
+
+/*****************************************************************************
+ *                      KernelPortSerialPut()
+ ****************************************************************************/
+
+void KernelPortSerialPut (char c)
+{
+  /* Put 'c' parameter in the TX buffer. */
+  UARTDR = c;
+
+  /* Wait until 'c' is dispatched. */
+  while (!(UARTFR & TXFE));
+}
+
+/*****************************************************************************
+ *                      KernelPortSerialGet()
+ ****************************************************************************/
+
+char KernelPortSerialGet (void)
+{
+  /* Wait until FIFO queue is not empty. */
+  while (UARTFR & RXFE);
+
+  /* Read character from FIFO. */
+  return (char) UARTDR;
+}
 
 /*****************************************************************************
  *                         KernelPortSetupTTB0()
  ****************************************************************************/
 
-void KernelPortSetupTTB0 (void)
+static void KernelPortSetupTTB0 (void)
 {
   /* Descriptors as integers. */
   uint64_t     invalidEntryValue = 0;
@@ -341,8 +458,8 @@ void KernelPortSetupTTB0 (void)
   blockEntry->XN        = 0;
   blockEntry->IGNORED   = 0;
 
-  /* Create L0 table. */
-  L0Table = KernelMemoryPageAllocate();
+  /* Obtain L0 table. */
+  L0Table = KernelPortTTB0;
 
   /* Loop over every gigabyte we want to setup. */
   do
@@ -354,7 +471,7 @@ void KernelPortSetupTTB0 (void)
     if (curL1Idx == 0)
     {
       /* Allocate a new L1 table: */
-      L1Table = KernelMemoryPageAllocate();
+      L1Table = KernelPortTTB0L1[curL0Idx];
 
       /* Initialize corresponding entry in L0 Table: */
       tableEntry->ADDR  = TO_TBL_ADDR(L1Table);
@@ -374,7 +491,7 @@ void KernelPortSetupTTB0 (void)
     /* Next 1GB. */
     curAddr += 0x40000000;
   }
-  while (curAddr != 0 && curAddr <= LAST_PHYSICAL_ADDRESS);
+  while (curAddr != 0 && curAddr <= LAST_PHYSICAL_ADDR);
 
   /* Initialize remaining main page table entries in the last l1 table. */
   for (; curL1Idx < ENTRY_COUNT; curL1Idx++)
@@ -388,18 +505,15 @@ void KernelPortSetupTTB0 (void)
     L0Table[curL0Idx] = invalidEntryValue;
   }
 
-  /* Store main table address. */
-  KernelPortTTB0 = L0Table;
-
   /* Print table information. */
-  KernelDebugPrintFmt("TTB0 TABLE: %x\n", KernelPortTTB0);
+  KernelPrintFmt("TTB0 TABLE: %x\n", KernelPortTTB0);
 }
 
 /*****************************************************************************
  *                         KernelPortSetupTTB1()
  ****************************************************************************/
 
-void KernelPortSetupTTB1 (void)
+static void KernelPortSetupTTB1 (void)
 {
   /* Descriptors as integers. */
   uint64_t     invalidEntryValue = 0;
@@ -420,8 +534,8 @@ void KernelPortSetupTTB1 (void)
   invalidEntry->VALID   = 0;
   invalidEntry->IGNORED = 0;
 
-  /* Create main page table. */
-  L0Table = KernelMemoryPageAllocate();
+  /* Obtain L0 table. */
+  L0Table = KernelPortTTB1;
 
   /* Initialize main page table entries. */
   for (curL0Idx = 0; curL0Idx < ENTRY_COUNT; curL0Idx++)
@@ -429,18 +543,15 @@ void KernelPortSetupTTB1 (void)
     L0Table[curL0Idx] = invalidEntryValue;
   }
 
-  /* Store main table address. */
-  KernelPortTTB1 = L0Table;
-
   /* Print table information. */
-  KernelDebugPrintFmt("TTB1 TABLE: %x\n", KernelPortTTB1);
+  KernelPrintFmt("TTB1 TABLE: %x\n", KernelPortTTB1);
 }
 
 /*****************************************************************************
  *                         KernelPortSetupTTBR0()
  ****************************************************************************/
 
-void KernelPortSetupTTBR0 (void)
+static void KernelPortSetupTTBR0 (void)
 {
   /* Register as integer & struct. */
   uint64_t ttbr0Value   = 0;
@@ -453,7 +564,7 @@ void KernelPortSetupTTBR0 (void)
   MRS(ttbr0Value, TTBR0_EL1);
 
   /* Print old value in hex. */
-  KernelDebugPrintFmt("TTBR0_EL1:  %x", ttbr0Value);
+  KernelPrintFmt("TTBR0_EL1:  %x", ttbr0Value);
 
   /* Initialize new value. */
   ttbr0Ptr->RESV = 0;
@@ -461,7 +572,7 @@ void KernelPortSetupTTBR0 (void)
   ttbr0Ptr->ASID = 0;
 
   /* Print new value in hex. */
-  KernelDebugPrintFmt(" -> %x\n", ttbr0Value);
+  KernelPrintFmt(" -> %x\n", ttbr0Value);
 
   /* Store new value. */
   MSR(TTBR0_EL1, ttbr0Value);
@@ -474,7 +585,7 @@ void KernelPortSetupTTBR0 (void)
  *                         KernelPortSetupTTBR1()
  ****************************************************************************/
 
-void KernelPortSetupTTBR1 (void)
+static void KernelPortSetupTTBR1 (void)
 {
   /* Register as integer & struct. */
   uint64_t ttbr1Value   = 0;
@@ -487,7 +598,7 @@ void KernelPortSetupTTBR1 (void)
   MRS(ttbr1Value, TTBR1_EL1);
 
   /* Print old value in hex. */
-  KernelDebugPrintFmt("TTBR1_EL1:  %x", ttbr1Value);
+  KernelPrintFmt("TTBR1_EL1:  %x", ttbr1Value);
 
   /* Initialize new value. */
   ttbr1Ptr->RESV = 0;
@@ -495,7 +606,7 @@ void KernelPortSetupTTBR1 (void)
   ttbr1Ptr->ASID = 0;
 
   /* Print new value in hex. */
-  KernelDebugPrintFmt(" -> %x\n", ttbr1Value);
+  KernelPrintFmt(" -> %x\n", ttbr1Value);
 
   /* Store new value. */
   MSR(TTBR1_EL1, ttbr1Value);
@@ -508,7 +619,7 @@ void KernelPortSetupTTBR1 (void)
  *                          KernelPortSetupTCR()
  ****************************************************************************/
 
-void KernelPortSetupTCR (void)
+static void KernelPortSetupTCR (void)
 {
   /* Register as integer & struct. */
   uint64_t tcrValue     = 0;
@@ -521,7 +632,7 @@ void KernelPortSetupTCR (void)
   MRS(tcrValue, TCR_EL1);
 
   /* Print old value in hex. */
-  KernelDebugPrintFmt("TCR_EL1:    %x", tcrValue);
+  KernelPrintFmt("TCR_EL1:    %x", tcrValue);
 
   /* Initialize new value. */
   tcrPtr->T0SZ  = TSZ_16_BITS;
@@ -545,7 +656,7 @@ void KernelPortSetupTCR (void)
   tcrPtr->RESV2 = 0;
 
   /* Print new value in hex. */
-  KernelDebugPrintFmt(" -> %x\n", tcrValue);
+  KernelPrintFmt(" -> %x\n", tcrValue);
 
   /* Store new value. */
   MSR(TCR_EL1, tcrValue);
@@ -558,7 +669,7 @@ void KernelPortSetupTCR (void)
  *                        KernelPortSetupSCTLRPre()
  ****************************************************************************/
 
-void KernelPortSetupSCTLRPre (void)
+static void KernelPortSetupSCTLRPre (void)
 {
   /* Register as integer & struct. */
   uint64_t sctlrValue   = 0;
@@ -571,13 +682,13 @@ void KernelPortSetupSCTLRPre (void)
   MRS(sctlrValue, SCTLR_EL1);
 
   /* Print old value in hex. */
-  KernelDebugPrintFmt("SCTLR_EL1:  %x", sctlrValue);
+  KernelPrintFmt("SCTLR_EL1:  %x", sctlrValue);
 
   /* Initialize new value. */
   sctlrPtr->MMU = MMU_DISABLE;
 
   /* Print new value in hex. */
-  KernelDebugPrintFmt(" -> %x\n", sctlrValue);
+  KernelPrintFmt(" -> %x\n", sctlrValue);
 
   /* Store new value. */
   MSR(SCTLR_EL1, sctlrValue);
@@ -598,7 +709,7 @@ void KernelPortSetupSCTLRPre (void)
  *                        KernelPortSetupSCTLRPost()
  ****************************************************************************/
 
-void KernelPortSetupSCTLRPost (void)
+static void KernelPortSetupSCTLRPost (void)
 {
   /* Register as integer & struct. */
   uint64_t sctlrValue   = 0;
@@ -611,13 +722,13 @@ void KernelPortSetupSCTLRPost (void)
   MRS(sctlrValue, SCTLR_EL1);
 
   /* Print old value in hex. */
-  KernelDebugPrintFmt("SCTLR_EL1:  %x", sctlrValue);
+  KernelPrintFmt("SCTLR_EL1:  %x", sctlrValue);
 
   /* Initialize new value. */
   sctlrPtr->MMU = MMU_ENABLE;
 
   /* Print new value in hex. */
-  KernelDebugPrintFmt(" -> %x\n", sctlrValue);
+  KernelPrintFmt(" -> %x\n", sctlrValue);
 
   /* Store new value. */
   MSR(SCTLR_EL1, sctlrValue);
@@ -635,10 +746,28 @@ void KernelPortSetupSCTLRPost (void)
 }
 
 /*****************************************************************************
- *                       KernelPortPageSetMap()
+ *                  KernelPortTranslationInitialize()
  ****************************************************************************/
 
-void *KernelPortSetMap(void *virtualAddr, void *physicalAddr)
+void KernelPortTranslationInitialize (void)
+{
+  /* Allocate TTB0 and TTB1 tables. */
+  KernelPortSetupTTB0();
+  KernelPortSetupTTB1();
+
+  /* Setup system registers. */
+  KernelPortSetupSCTLRPre();
+  KernelPortSetupTTBR0();
+  KernelPortSetupTTBR1();
+  KernelPortSetupTCR();
+  KernelPortSetupSCTLRPost();
+}
+
+/*****************************************************************************
+ *                     KernelPortTranslationSet()
+ ****************************************************************************/
+
+void *KernelPortTranslationSet (void *virtualAddr, void *physicalAddr)
 {
   /* Descriptors as integers. */
   uint64_t    invalidEntryValue   = 0;
@@ -861,10 +990,10 @@ void *KernelPortSetMap(void *virtualAddr, void *physicalAddr)
 }
 
 /*****************************************************************************
- *                        KernelPortPageGetMap()
+ *                      KernelPortTranslationGet()
  ****************************************************************************/
 
-void *KernelPortGetMap(void *virtualAddr)
+void *KernelPortTranslationGet (void *virtualAddr)
 {
   /* Descriptors as integers. */
   uint64_t    tableEntryValue   = 0;
@@ -959,10 +1088,10 @@ void *KernelPortGetMap(void *virtualAddr)
 }
 
 /*****************************************************************************
- *                       KernelPortPageDelMap()
+ *                      KernelPortTranslationDel()
  ****************************************************************************/
 
-void *KernelPortDelMap(void *virtualAddr)
+void *KernelPortTranslationDel (void *virtualAddr)
 {
   /* Descriptors as integers. */
   uint64_t    invalidEntryValue = 0;
@@ -1121,29 +1250,33 @@ void *KernelPortDelMap(void *virtualAddr)
 }
 
 /*****************************************************************************
- *                       KernelPortMemoryInitialize()
+ *                  KernelPortThreadInitialize()
  ****************************************************************************/
 
-void KernelPortMemoryInitialize (void)
+void KernelPortThreadInitialize (void)
 {
-  /* Allocate TTB0 and TTB1 tables (TTB1 first, then TTB0). */
-  KernelPortSetupTTB1();
-  KernelPortSetupTTB0();
+  /* Loop counter. */
+  uint64_t  curThread = 0;
 
-  /* Print empty line. */
-  KernelDebugPrintFmt("\n");
-
-  /* Setup system registers. */
-  KernelPortSetupSCTLRPre();
-  KernelPortSetupTTBR0();
-  KernelPortSetupTTBR1();
-  KernelPortSetupTCR();
-  KernelPortSetupSCTLRPost();
-
-  /* Print empty line. */
-  KernelDebugPrintFmt("\n");
-
-  /* Done. */
-  KernelDebugPrintFmt("Memory initialized successfully!\n");
+  /* Initialize thread list. */
+  for (curThread = 0; curThread < THREAD_COUNT; curThread++)
+  {
+    KernelPortThreadList[curThread].used = 0;
+  }
 }
 
+/*****************************************************************************
+ *                  KernelPortProcessInitialize()
+ ****************************************************************************/
+
+void KernelPortProcessInitialize (void)
+{
+  /* Loop counter. */
+  uint64_t  curProcess = 0;
+
+  /* Initialize thread list. */
+  for (curProcess = 0; curProcess < PROCESS_COUNT; curProcess++)
+  {
+    KernelPortProcessList[curProcess].used = 0;
+  }
+}

@@ -88,19 +88,28 @@ extern uint64_t KernelMemoryRamEnd;
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-void     KernelDebugPrintChr(char      chr);
-void     KernelDebugPrintStr(char     *str);
-void     KernelDebugPrintDec(uint64_t  dec);
-void     KernelDebugPrintHex(uint64_t  hex);
-void     KernelDebugPrintFmt(char     *fmt, ...);
+/* Core API. */
+void     KernelCoreInitialize(void);
+void     KernelCoreStart(void);
 
+/* Print API. */
+void     KernelPrintInitialize(void);
+void     KernelPrintChr(char      chr);
+void     KernelPrintStr(char     *str);
+void     KernelPrintDec(uint64_t  dec);
+void     KernelPrintHex(uint64_t  hex);
+void     KernelPrintFmt(char     *fmt, ...);
+
+/* Memory API. */
 void     KernelMemoryInitialize(void);
 void    *KernelMemoryPageAllocate(void);
 void     KernelMemoryPageDeallocate(void *pageBaseAddr);
 
-void     KernelCoreInitialize(void);
-void     KernelCoreStart(void);
+/* Thread API. */
+void     KernelThreadInitialize(void);
 
+/* Power API. */
+void     KernelPowerInitialize(void);
 void     KernelPowerOff(void);
 
 /*****************************************************************************

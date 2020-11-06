@@ -34,17 +34,26 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                         osKernelInitialize()
+ *                       KernelCoreInitialize()
  ****************************************************************************/
 
 void KernelCoreInitialize(void)
 {
+  /* Initialize CPU-specific port. */
+  KernelPortSerialInitialize();
+  KernelPortTranslationInitialize();
+  KernelPortProcessInitialize();
+  KernelPortThreadInitialize();
+
   /* Initialize kernel components. */
+  KernelPrintInitialize();
   KernelMemoryInitialize();
+  KernelThreadInitialize();
+  KernelPowerInitialize();
 }
 
 /*****************************************************************************
- *                           osKernelStart()
+ *                         KernelCoreStart()
  ****************************************************************************/
 
 void KernelCoreStart(void)

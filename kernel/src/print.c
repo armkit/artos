@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/debug.c
- * @brief  ARTOS kernel debug module.
+ * @file   kernel/src/print.c
+ * @brief  ARTOS kernel print (stdout) module.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -34,73 +34,85 @@
 #include "kernel/inc/internal.h"
 
 /*****************************************************************************
- *                           KernelDebugPrintChr()
+ *                       KernelPrintInitialize()
  ****************************************************************************/
 
-void KernelDebugPrintChr(char chr)
+void KernelPrintInitialize(void)
 {
-  /* Print character using kernel's internal ARM UART driver. */
-  KernelSerialPut(chr);
+  /* Do nothing. */
 }
 
 /*****************************************************************************
- *                           KernelDebugPrintStr()
+ *                          KernelPrintChr()
  ****************************************************************************/
 
-void KernelDebugPrintStr(char *str)
+void KernelPrintChr(char chr)
+{
+  /* Print character using CPU-specific UART driver. */
+  KernelPortSerialPut(chr);
+}
+
+/*****************************************************************************
+ *                          KernelPrintStr()
+ ****************************************************************************/
+
+void KernelPrintStr(char *str)
 {
   /* Loop over str and print each character. */
   while (*str)
   {
-    KernelDebugPrintChr(*str++);
+    KernelPrintChr(*str++);
   }
 }
 
 /*****************************************************************************
- *                          KernelDebugPrintDec()
+ *                          KernelPrintDec()
  ****************************************************************************/
 
-void KernelDebugPrintDec(uint64_t dec)
+void KernelPrintDec(uint64_t dec)
 {
   /* Check which range dec is within. */
   if (dec < 10)
   {
     /* Just print dec (base case). */
-    KernelDebugPrintChr('0' + dec);
+    KernelPrintChr('0' + dec);
   }
   else
   {
     /* Recursively print the remaining part. */
-    KernelDebugPrintDec(dec/10);
+    KernelPrintDec(dec/10);
+
     /* Print the first digit. */
-    KernelDebugPrintDec(dec%10);
+    KernelPrintDec(dec%10);
   }
 }
 
 /*****************************************************************************
- *                          KernelDebugPrintHex()
+ *                          KernelPrintHex()
  ****************************************************************************/
 
-void KernelDebugPrintHex(uint64_t hex)
+void KernelPrintHex(uint64_t hex)
 {
-  /* Local variables */
+  /* Loop counter. */
   int64_t i;
+
   /* Print '0x' prefix. */
-  KernelDebugPrintChr('0');
-  KernelDebugPrintChr('x');
+  KernelPrintChr('0');
+  KernelPrintChr('x');
+
   /* Loop over hex digits. */
   for (i = 60; i >= 0; i -= 4)
   {
     /* Print hex digit. */
-    KernelDebugPrintChr("0123456789ABCDEF"[(hex>>i)&0x0F]);
+    KernelPrintChr("0123456789ABCDEF"[(hex>>i)&0x0F]);
   }
 }
 
 /*****************************************************************************
- *                          KernelDebugPrintFmt()
+ *                          KernelPrintFmt()
  ****************************************************************************/
 
-void KernelDebugPrintFmt(char *fmt, ...)
+void KernelPrintFmt(char *fmt, ...)
 {
   /* Let pArg point to function arguments. */
   uint64_t *pArg = ((uint64_t *) &fmt)+20;
@@ -115,37 +127,37 @@ void KernelDebugPrintFmt(char *fmt, ...)
       switch (*++fmt) {
         /* [%c] Character. */
         case 'c':
-          KernelDebugPrintChr((char) *pArg++);
+          KernelPrintChr((char) *pArg++);
           break;
         /* [%s] String. */
         case 's':
-          KernelDebugPrintStr((char *) *pArg++);
+          KernelPrintStr((char *) *pArg++);
           break;
         /* [%d] Decimal. */
         case 'u':
         case 'd':
-          KernelDebugPrintDec((uint64_t) *pArg++);
+          KernelPrintDec((uint64_t) *pArg++);
           break;
         /* [%x] Hexadecimal. */
         case 'p':
         case 'x':
         case 'X':
-          KernelDebugPrintHex((uint64_t) *pArg++);
+          KernelPrintHex((uint64_t) *pArg++);
           break;
         /* [%%] Percentage. */
         case '%':
-          KernelDebugPrintChr('%');
+          KernelPrintChr('%');
           break;
         /* [%?] Unknown. */
         default:
-          KernelDebugPrintChr('?');
+          KernelPrintChr('?');
           break;
       }
     }
     else
     {
       /* Print plain character. */
-      KernelDebugPrintChr(*fmt);
+      KernelPrintChr(*fmt);
     }
 
     /* Next character. */
