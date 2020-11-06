@@ -217,6 +217,34 @@
 #define PXN_NOT_PERMIT_EXEC     1
 
 /*****************************************************************************
+ *                             TTB1 ZONES MACROS
+ ****************************************************************************/
+
+/* Private memory zone. */
+#define PRIMEM_ZONE_START       (0xFFFF000000000000)
+#define PRIMEM_ZONE_END         (0xFFFF3FFFFFFFFFFF)
+#define PRIMEM_ZONE_SLOTS       (64*1024)
+#define PRIMEM_ZONE_SLOT_SIZE   (0x40000000UL)
+
+/* Shared memory zone. */
+#define SHMEM_ZONE_START        (0xFFFF400000000000)
+#define SHMEM_ZONE_END          (0xFFFF7FFFFFFFFFFF)
+#define SHMEM_ZONE_SLOTS        (64*1024)
+#define SHMEM_ZONE_SLOT_SIZE    (0x40000000UL)
+
+/* Reserved zone. */
+#define RESERVED_ZONE_START     (0xFFFF80000000000)
+#define RESERVED_ZONE_END       (0xFFFFBFFFFFFFFFF)
+#define RESERVED_ZONE_SLOTS     (64*1024)
+#define RESERVED_ZONE_SLOT_SIZE (0x40000000UL)
+
+/* Stack zone. */
+#define STACK_ZONE_START        (0xFFFFCFFFFFFFFFF)
+#define STACK_ZONE_END          (0xFFFFFFFFFFFFFFF)
+#define STACK_ZONE_SLOTS        (64*1024)
+#define STACK_ZONE_SLOT_SIZE    (0x40000000UL)
+
+/*****************************************************************************
  *                           RESOURCES MACROS
  ****************************************************************************/
 
@@ -1258,6 +1286,8 @@ void KernelPortThreadInitialize (void)
   /* Loop counter. */
   uint64_t  curThread = 0;
 
+  //thread_t  thread_listp[THREAD_COUNT];
+
   /* Initialize thread list. */
   for (curThread = 0; curThread < THREAD_COUNT; curThread++)
   {
@@ -1273,6 +1303,8 @@ void KernelPortProcessInitialize (void)
 {
   /* Loop counter. */
   uint64_t  curProcess = 0;
+
+  //process_t process_list[PROCESS_COUNT];
 
   /* Initialize thread list. */
   for (curProcess = 0; curProcess < PROCESS_COUNT; curProcess++)

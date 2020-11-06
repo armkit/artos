@@ -51,6 +51,9 @@
 /* Thread/process name maximum size. */
 #define KERNEL_CONFIG_NAME_MAX_SIZE  32
 
+/* Stack maximum size. */
+#define KERNEL_CONFIG_STACK_MAXSIZE  0x2000
+
 /*****************************************************************************
  *                            END OF HEADER
  ****************************************************************************/
