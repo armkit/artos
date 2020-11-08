@@ -89,28 +89,38 @@ extern uint64_t KernelMemoryRamEnd;
  ****************************************************************************/
 
 /* Core API. */
-void     KernelCoreInitialize(void);
-void     KernelCoreStart(void);
+void     KernelCoreInitialize (void);
+void     KernelCoreStart      (void);
 
 /* Print API. */
-void     KernelPrintInitialize(void);
-void     KernelPrintChr(char      chr);
-void     KernelPrintStr(char     *str);
-void     KernelPrintDec(uint64_t  dec);
-void     KernelPrintHex(uint64_t  hex);
-void     KernelPrintFmt(char     *fmt, ...);
+void     KernelPrintInitialize (void);
+void     KernelPrintChr        (char      chr);
+void     KernelPrintStr        (char     *str);
+void     KernelPrintDec        (uint64_t  dec);
+void     KernelPrintHex        (uint64_t  hex);
+void     KernelPrintFmt        (char     *fmt, ...);
 
 /* Memory API. */
-void     KernelMemoryInitialize(void);
-void    *KernelMemoryPageAllocate(void);
-void     KernelMemoryPageDeallocate(void *pageBaseAddr);
+void     KernelMemoryInitialize     (void);
+void    *KernelMemoryPageAllocate   (void);
+void     KernelMemoryPageDeallocate (void *pageBaseAddr);
 
 /* Thread API. */
-void     KernelThreadInitialize(void);
+void     KernelThreadInitialize (void);
+void     KernelThreadAdmit      (uint64_t threadId);
+uint64_t KernelThreadDispatch   (void);
+void     KernelThreadRun        (uint64_t threadId);
+uint64_t KernelThreadPause      (void);
+void     KernelThreadCreate     (void);
+void     KernelThreadYield      (void);
+void     KernelThreadBlock      (void);
+void     KernelThreadUnblock    (void);
+void     KernelThreadTerminate  (void);
+void     KernelThreadJoin       (void);
 
 /* Power API. */
-void     KernelPowerInitialize(void);
-void     KernelPowerOff(void);
+void     KernelPowerInitialize (void);
+void     KernelPowerOff        (void);
 
 /*****************************************************************************
  *                            END OF HEADER

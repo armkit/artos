@@ -45,7 +45,10 @@
  *                           STATIC VARIABLES
  ****************************************************************************/
 
-static thread_t *KernelThreadsReadyQueue[MAX_CPU][MAX_PRIORITY];
+static thread_t *KernelThreadsReadyQuHead[MAX_CPU][MAX_PRIORITY];
+static thread_t *KernelThreadsReadyQuTail[MAX_CPU][MAX_PRIORITY];
+
+static thread_t *KernelThreadsRunningThread[MAX_CPU];
 
 /*****************************************************************************
  *                       KernelThreadInitialize()
@@ -62,7 +65,107 @@ void KernelThreadInitialize(void)
   {
     for (curPriority = 0; curPriority < MAX_PRIORITY; curPriority++)
     {
-      KernelThreadsReadyQueue[curCPU][curPriority] = NULL;
+      KernelThreadsReadyQuHead[curCPU][curPriority] = NULL;
+      KernelThreadsReadyQuTail[curCPU][curPriority] = NULL;
     }
+    KernelThreadsRunningThread[curCPU] = NULL;
   }
+
+  /* CREATE IDLE THREAD FOR EVERY PROCESSOR. PRIORITY = 0 */
+
+  /* After creation for each idle thread, call:
+   * KernelThreadAdmit(idleThreadId)
+   */
+}
+
+/*****************************************************************************
+ *                        KernelThreadAdmit()
+ ****************************************************************************/
+
+void KernelThreadAdmit(uint64_t threadId)
+{
+  /* Enqueue */
+
+  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail */
+}
+
+/*****************************************************************************
+ *                       KernelThreadDispatch()
+ ****************************************************************************/
+
+uint64_t KernelThreadDispatch (void)
+{
+  /* Dequeue */
+
+  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail */
+}
+
+/*****************************************************************************
+ *                         KernelThreadRun()
+ ****************************************************************************/
+
+void KernelThreadRun (uint64_t threadId)
+{
+  /* Put thread on the CPU and RESTORE its context. */
+
+  /* Update KernelThreadsRunningThread */
+}
+
+/*****************************************************************************
+ *                        KernelThreadPause()
+ ****************************************************************************/
+
+uint64_t KernelThreadPause (void)
+{
+  /* Read KernelThreadsRunningThread */
+
+  /* Remove thread from the CPU and STORE its context. */
+}
+
+/*****************************************************************************
+ *                        KernelThreadCreate()
+ ****************************************************************************/
+
+void KernelThreadCreate (void)
+{
+}
+
+/*****************************************************************************
+ *                       KernelThreadYield()
+ ****************************************************************************/
+
+void KernelThreadYield (void)
+{
+}
+
+/*****************************************************************************
+ *                        KernelThreadBlock()
+ ****************************************************************************/
+
+void KernelThreadBlock (void)
+{
+}
+
+/*****************************************************************************
+ *                       KernelThreadUnblock()
+ ****************************************************************************/
+
+void KernelThreadUnblock (void)
+{
+}
+
+/*****************************************************************************
+ *                      KernelThreadTerminate()
+ ****************************************************************************/
+
+void KernelThreadTerminate (void)
+{
+}
+
+/*****************************************************************************
+ *                       KernelThreadJoin()
+ ****************************************************************************/
+
+void KernelThreadJoin (void)
+{
 }
