@@ -113,7 +113,9 @@ void KernelThreadAdmit (thread_t *thread)
     threadTail->nextReadyThread = thread;
     threadTail = thread;
   }
-  threadHead = threadHead;
+
+  KernelThreadsReadyQuTail[threadCpu][threadPriority] = threadTail;
+  KernelThreadsReadyQuHead[threadCpu][threadPriority] = threadHead;
 }
 
 /*****************************************************************************
@@ -136,7 +138,8 @@ uint64_t KernelThreadDispatch (thread_t *thread)
     threadTail = NULL;
   }
 
-  threadTail = threadTail;
+  KernelThreadsReadyQuTail[threadCpu][threadPriority] = threadTail;
+  KernelThreadsReadyQuHead[threadCpu][threadPriority] = threadHead;
 
   return 0;
 }
