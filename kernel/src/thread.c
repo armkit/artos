@@ -54,59 +54,89 @@ static thread_t *KernelThreadsRunningThread[MAX_CPU];
  *                       KernelThreadInitialize()
  ****************************************************************************/
 
-void KernelThreadInitialize(void)
+void KernelThreadInitialize (void)
 {
   /* Loop counters. */
-  uint64_t curCPU      = 0;
+  uint64_t curCpu      = 0;
   uint64_t curPriority = 0;
 
+  /* Local variables. */
+  thread_t *idleThread = NULL;
+
   /* Initialize Ready Queue. */
-  for (curCPU = 0; curCPU < MAX_CPU; curCPU++)
+  for (curCpu = 0; curCpu < MAX_CPU; curCpu++)
   {
     for (curPriority = 0; curPriority < MAX_PRIORITY; curPriority++)
     {
-      KernelThreadsReadyQuHead[curCPU][curPriority] = NULL;
-      KernelThreadsReadyQuTail[curCPU][curPriority] = NULL;
+      KernelThreadsReadyQuHead[curCpu][curPriority] = NULL;
+      KernelThreadsReadyQuTail[curCpu][curPriority] = NULL;
     }
-    KernelThreadsRunningThread[curCPU] = NULL;
+    KernelThreadsRunningThread[curCpu] = NULL;
   }
 
   /* CREATE IDLE THREAD FOR EVERY PROCESSOR. PRIORITY = 0 */
+  for(curCpu = 0; curCpu < MAX_CPU; curCpu ++)
+  {
+    idleThread = KernelPortThreadAllocate();
+    idleThread->threadCpu = curCpu;
+    idleThread->threadPriority = 0;
+    idleThread->nextReadyThread = NULL;
+    KernelThreadsReadyQuHead[curCpu][0] = idleThread;
+    KernelThreadsReadyQuTail[curCpu][0] = idleThread;
+  }
 
-  /* After creation for each idle thread, call:
-   * KernelThreadAdmit(idleThreadId)
-   */
+  /* Calling Admit. */
+  KernelThreadAdmit(idleThread);
+
 }
 
 /*****************************************************************************
  *                        KernelThreadAdmit()
  ****************************************************************************/
 
-void KernelThreadAdmit(uint64_t threadId)
+void KernelThreadAdmit (thread_t *thread)
 {
+  /* Simplifying variables. */
+  uint64_t threadCpu      = thread->threadCpu;
+  uint64_t threadPriority = thread->threadPriority;
+  thread_t *threadTail    = KernelThreadsReadyQuTail[threadCpu][threadPriority];
+  thread_t *threadHead    = KernelThreadsReadyQuHead[threadCpu][threadPriority];
+
   /* Enqueue */
-
-  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail,
-   * Insert at tail.
-   */
-
-  (void) threadId;
+  if(threadTail == NULL)
+  {
+    threadTail = thread;
+    threadHead = thread;
+  }
+  else
+  {
+    threadTail->nextReadyThread = thread;
+    threadTail = thread;
+  }
+  threadHead = threadHead;
 }
 
 /*****************************************************************************
  *                       KernelThreadDispatch()
  ****************************************************************************/
 
-uint64_t KernelThreadDispatch (uint64_t threadCpu, uint64_t threadPriority)
+uint64_t KernelThreadDispatch (thread_t *thread)
 {
+  /* Simplifying variables. */
+  uint64_t threadCpu       = thread->threadCpu;
+  uint64_t threadPriority  = thread->threadPriority;
+  thread_t *threadTail     = KernelThreadsReadyQuTail[threadCpu][threadPriority];
+  thread_t *threadHead     = KernelThreadsReadyQuHead[threadCpu][threadPriority];
+
   /* Dequeue */
+  threadHead = threadHead->nextReadyThread;
 
-  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail,
-   * remove from head.
-   */
+  if(threadHead == NULL)
+  {
+    threadTail = NULL;
+  }
 
-  (void) threadCpu;
-  (void) threadPriority;
+  threadTail = threadTail;
 
   return 0;
 }

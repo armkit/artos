@@ -49,14 +49,6 @@ typedef struct process
   uint8_t        processName[KERNEL_CONFIG_NAME_MAX_SIZE];
 } __attribute__((packed)) process_t;
 
-/* Port-specific thread struct should include thread_t at the start. */
-typedef struct thread
-{
-  uint8_t        threadName[KERNEL_CONFIG_NAME_MAX_SIZE];
-  uint64_t       threadCpu;
-  uint64_t       threadPriority;
-  struct thread *nextReadyThread;
-} __attribute__((packed)) thread_t;
 
 /*****************************************************************************
  *                          FUNCTION PROTOTYPES
