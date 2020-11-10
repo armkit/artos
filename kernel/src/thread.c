@@ -86,18 +86,29 @@ void KernelThreadAdmit(uint64_t threadId)
 {
   /* Enqueue */
 
-  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail */
+  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail,
+   * Insert at tail.
+   */
+
+  (void) threadId;
 }
 
 /*****************************************************************************
  *                       KernelThreadDispatch()
  ****************************************************************************/
 
-uint64_t KernelThreadDispatch (void)
+uint64_t KernelThreadDispatch (uint64_t threadCpu, uint64_t threadPriority)
 {
   /* Dequeue */
 
-  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail */
+  /* Deals with KernelThreadsReadyQuHead and KernelThreadsReadyQuTail,
+   * remove from head.
+   */
+
+  (void) threadCpu;
+  (void) threadPriority;
+
+  return 0;
 }
 
 /*****************************************************************************
@@ -109,6 +120,8 @@ void KernelThreadRun (uint64_t threadId)
   /* Put thread on the CPU and RESTORE its context. */
 
   /* Update KernelThreadsRunningThread */
+
+  (void) threadId;
 }
 
 /*****************************************************************************
@@ -120,6 +133,8 @@ uint64_t KernelThreadPause (void)
   /* Read KernelThreadsRunningThread */
 
   /* Remove thread from the CPU and STORE its context. */
+
+  return 0;
 }
 
 /*****************************************************************************

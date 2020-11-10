@@ -108,7 +108,7 @@ void     KernelMemoryPageDeallocate (void *pageBaseAddr);
 /* Thread API. */
 void     KernelThreadInitialize (void);
 void     KernelThreadAdmit      (uint64_t threadId);
-uint64_t KernelThreadDispatch   (void);
+uint64_t KernelThreadDispatch   (uint64_t threadCpu, uint64_t threadPriority);
 void     KernelThreadRun        (uint64_t threadId);
 uint64_t KernelThreadPause      (void);
 void     KernelThreadCreate     (void);
