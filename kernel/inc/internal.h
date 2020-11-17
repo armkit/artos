@@ -43,12 +43,26 @@
  *                              TYPEDEFS
  ****************************************************************************/
 
-/* Port-specific process struct should include process_t at the start. */
+/* Structure to hold process information. */
 typedef struct process
 {
-  uint8_t        processName[KERNEL_CONFIG_NAME_MAX_SIZE];
+  uint64_t             isUsed;
+  uint8_t              processName[KERNEL_CONFIG_NAME_MAX_SIZE];
+  uint64_t             processId;
+  struct process      *nextFreeProcess;
 } __attribute__((packed)) process_t;
 
+/* Structure to hold thread information. */
+typedef struct thread
+{
+  uint64_t            isUsed;
+  uint8_t             threadName[KERNEL_CONFIG_NAME_MAX_SIZE];
+  uint64_t            threadId;
+  uint64_t            threadCpu;
+  uint64_t            threadPriority;
+  struct thread      *nextReadyThread;
+  struct thread      *nextFreeThread;
+} __attribute__((packed)) thread_t;
 
 /*****************************************************************************
  *                          FUNCTION PROTOTYPES
@@ -65,19 +79,28 @@ void *KernelPortTranslationSet(void *virtualAddr, void *physicalAddr);
 void *KernelPortTranslationGet(void *virtualAddr);
 void *KernelPortTranslationDel(void *virtualAddr);
 
-/* CPU-Specific Process Handling. */
-void       KernelPortProcessInitialize(void);
-process_t *KernelPortProcessAllocate(void);
-void       KernelPortProcessDeallocate(process_t *process);
-process_t *KernelPortProcessGet(uint64_t processId);
-uint64_t   KernelPortProcessId(process_t *process);
+/* Memory module. */
+void     KernelMemoryInitialize(void);
+void    *KernelMemoryPageAllocate(void);
+void     KernelMemoryPageDeallocate(void *pageBaseAddr);
 
-/* CPU-Specific Thread Handling. */
-void      KernelPortThreadInitialize(void);
-thread_t *KernelPortThreadAllocate(void);
-void      KernelPortThreadDeallocate(thread_t *thread);
-thread_t *KernelPortThreadGet(uint64_t threadId);
-uint64_t  KernelPortThreadId(thread_t *thread);
+/* Process module. */
+void       KernelProcessInitialize(void);
+process_t *KernelProcessAllocate(void);
+void       KernelProcessDeallocate(process_t *process);
+process_t *KernelProcessGet(uint64_t processId);
+
+/* Thread module. */
+void      KernelThreadInitialize(void);
+thread_t *KernelThreadAllocate(uint64_t threadCpu,
+                               uint64_t threadPriority);
+void      KernelThreadDeallocate(thread_t *thread);
+thread_t *KernelThreadGet(uint64_t threadId);
+void      KernelThreadAdmit(thread_t *thread);
+thread_t *KernelThreadDispatch(uint64_t threadCpu,
+                               uint64_t threadPriority);
+void      KernelThreadRun(uint64_t threadId);
+uint64_t  KernelThreadPause(void);
 
 /*****************************************************************************
  *                            END OF HEADER

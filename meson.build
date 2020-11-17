@@ -45,6 +45,7 @@ sources=['boot/src/main.c',
          'kernel/src/core.c',
          'kernel/src/print.c',
          'kernel/src/memory.c',
+         'kernel/src/process.c',
          'kernel/src/thread.c',
          'kernel/src/power.c']
 

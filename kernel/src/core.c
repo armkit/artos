@@ -42,12 +42,11 @@ void KernelCoreInitialize(void)
   /* Initialize CPU-specific port. */
   KernelPortSerialInitialize();
   KernelPortTranslationInitialize();
-  KernelPortProcessInitialize();
-  KernelPortThreadInitialize();
 
   /* Initialize kernel components. */
   KernelPrintInitialize();
   KernelMemoryInitialize();
+  KernelProcessInitialize();
   KernelThreadInitialize();
   KernelPowerInitialize();
 }

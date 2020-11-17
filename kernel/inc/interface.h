@@ -76,17 +76,6 @@ typedef unsigned long      uint64_t;
 /* Error type. */
 typedef int64_t            error_t;
 
-/* Port-specific thread struct should include thread_t at the start. */
-typedef struct thread
-{
-  uint8_t        threadName[KERNEL_CONFIG_NAME_MAX_SIZE];
-  uint64_t       threadCpu;
-  uint64_t       threadPriority;
-  struct thread *nextReadyThread;
-} __attribute__((packed)) thread_t;
-
-
-
 /*****************************************************************************
  *                             EXTERNS
  ****************************************************************************/
@@ -111,17 +100,7 @@ void     KernelPrintDec        (uint64_t  dec);
 void     KernelPrintHex        (uint64_t  hex);
 void     KernelPrintFmt        (char     *fmt, ...);
 
-/* Memory API. */
-void     KernelMemoryInitialize     (void);
-void    *KernelMemoryPageAllocate   (void);
-void     KernelMemoryPageDeallocate (void *pageBaseAddr);
-
 /* Thread API. */
-void     KernelThreadInitialize (void);
-void     KernelThreadAdmit      (thread_t *thread);
-uint64_t KernelThreadDispatch   (thread_t *thread);
-void     KernelThreadRun        (uint64_t threadId);
-uint64_t KernelThreadPause      (void);
 void     KernelThreadCreate     (void);
 void     KernelThreadYield      (void);
 void     KernelThreadBlock      (void);
