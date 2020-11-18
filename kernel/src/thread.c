@@ -308,7 +308,26 @@ uint64_t KernelThreadPause (void)
 }
 
 /*****************************************************************************
- *                        KernelThreadCreate()
+ *                           KernelThreadIdle()
+ ****************************************************************************/
+
+void KernelThreadIdle(void *arg)
+{
+  KernelPrintFmt("Hello from idle thread! %p\n", arg);
+  while (1);
+}
+
+/*****************************************************************************
+ *                        KernelThreadScheduler()
+ ****************************************************************************/
+
+void KernelThreadScheduler()
+{
+  /* Dispatch highest-priority job and run it on all processors. */
+}
+
+/*****************************************************************************
+ *                         KernelThreadCreate()
  ****************************************************************************/
 
 void KernelThreadCreate (void)
@@ -316,7 +335,7 @@ void KernelThreadCreate (void)
 }
 
 /*****************************************************************************
- *                       KernelThreadYield()
+ *                        KernelThreadYield()
  ****************************************************************************/
 
 void KernelThreadYield (void)

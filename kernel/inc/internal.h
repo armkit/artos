@@ -90,6 +90,8 @@ thread_t   *KernelThreadDispatch       (uint64_t threadCpu,
                                         uint64_t threadPriority);
 void        KernelThreadRun            (uint64_t threadId);
 uint64_t    KernelThreadPause          (void);
+void        KernelThreadIdle           (void *arg);
+void        KernelThreadScheduler      ();
 
 /*****************************************************************************
  *                            END OF HEADER
