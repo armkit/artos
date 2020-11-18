@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/port.c
- * @brief  ARTOS kernel port module.
+ * @file   port/src/translation.c
+ * @brief  ARTOS port module: address translation.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -29,12 +29,21 @@
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel includes. */
-#include "kernel/inc/interface.h"
-#include "kernel/inc/internal.h"
+/* Port includes. */
+#include "port/inc/interface.h"
+#include "port/inc/internal.h"
 
 /*****************************************************************************
- *                           ASSEMNBLY MACROS
+ *                          FUNCTION PROTOTYPES
+ ****************************************************************************/
+
+/* FIXME: THIS SHOULD BE ABSTRACTED IN A BETTER WAY. */
+void *KernelMemoryPageAllocate   (void);
+void  KernelMemoryPageDeallocate (void *pageBaseAddr);
+void  KernelPrintFmt             (char *fmt, ...);
+
+/*****************************************************************************
+ *                           ASSEMBLY MACROS
  ****************************************************************************/
 
 #define TLBI(variant)     __asm__("TLBI " #variant)
@@ -42,46 +51,6 @@
 #define ISB()             __asm__("ISB")
 #define MSR(sys_reg, var) __asm__("MSR " #sys_reg " , %0"::"r"(var))
 #define MRS(var, sys_reg) __asm__("MRS %0, " #sys_reg : "=r"(var));
-
-/*****************************************************************************
- *                             UART MACROS
- ****************************************************************************/
-
-/* PL011 registers */
-#define UARTDR            (*((volatile unsigned short *) 0x09000000))
-#define UARTRSR           (*((volatile unsigned short *) 0x09000004))
-#define UARTECR           (*((volatile unsigned short *) 0x09000004))
-#define UARTFR            (*((volatile unsigned short *) 0x09000018))
-#define UARTILPR          (*((volatile unsigned short *) 0x09000020))
-#define UARTIBRD          (*((volatile unsigned short *) 0x09000024))
-#define UARTFBRD          (*((volatile unsigned short *) 0x09000028))
-#define UARTFLCR_H        (*((volatile unsigned short *) 0x0900002C))
-#define UARTCR            (*((volatile unsigned short *) 0x09000030))
-
-/* UARTFR flags */
-#define CTS               (0x0001)
-#define DSR               (0x0002)
-#define DCD               (0x0004)
-#define BUSY              (0x0008)
-#define RXFE              (0x0010)
-#define TXFF              (0x0020)
-#define RXFF              (0x0040)
-#define TXFE              (0x0080)
-#define RI                (0x0100)
-
-/* UARTCR flags */
-#define UARTEN            (0x0001)
-#define SIREN             (0x0002)
-#define SIRLP             (0x0004)
-#define LBE               (0x0080)
-#define TXE               (0x0100)
-#define RXE               (0x0200)
-#define DTR               (0x0400)
-#define RTS               (0x0800)
-#define Out1              (0x1000)
-#define Out2              (0x2000)
-#define RTSEn             (0x4000)
-#define CTSEn             (0x8000)
 
 /*****************************************************************************
  *                              TCR MACROS
@@ -217,34 +186,6 @@
 #define PXN_NOT_PERMIT_EXEC     1
 
 /*****************************************************************************
- *                             TTB1 ZONES MACROS
- ****************************************************************************/
-
-/* Private memory zone. */
-#define PRIMEM_ZONE_START       (0xFFFF000000000000UL)
-#define PRIMEM_ZONE_END         (0xFFFF3FFFFFFFFFFFUL)
-#define PRIMEM_ZONE_SLOTS       (64*1024)
-#define PRIMEM_ZONE_SLOT_SIZE   (0x40000000UL)
-
-/* Shared memory zone. */
-#define SHMEM_ZONE_START        (0xFFFF400000000000UL)
-#define SHMEM_ZONE_END          (0xFFFF7FFFFFFFFFFFUL)
-#define SHMEM_ZONE_SLOTS        (64*1024)
-#define SHMEM_ZONE_SLOT_SIZE    (0x40000000UL)
-
-/* Reserved zone. */
-#define RESERVED_ZONE_START     (0xFFFF80000000000UL)
-#define RESERVED_ZONE_END       (0xFFFFBFFFFFFFFFFUL)
-#define RESERVED_ZONE_SLOTS     (64*1024)
-#define RESERVED_ZONE_SLOT_SIZE (0x40000000UL)
-
-/* Stack zone. */
-#define STACK_ZONE_START        (0xFFFFC0000000000UL)
-#define STACK_ZONE_END          (0xFFFFFFFFFFFFFFFUL)
-#define STACK_ZONE_SLOTS        (64*1024)
-#define STACK_ZONE_SLOT_SIZE    (0x40000000UL)
-
-/*****************************************************************************
  *                              TYPEDEFS
  ****************************************************************************/
 
@@ -354,52 +295,17 @@ typedef struct SCTLR
  ****************************************************************************/
 
 /* TTB0/TTB1 L0 page tables. */
-static uint64_t KernelPortTTB0[ENTRY_COUNT] TBL_ALIGN;
-static uint64_t KernelPortTTB1[ENTRY_COUNT] TBL_ALIGN;
+static uint64_t PortTTB0[ENTRY_COUNT] TBL_ALIGN;
+static uint64_t PortTTB1[ENTRY_COUNT] TBL_ALIGN;
 
 /* TTB0 L1 page tables */
-static uint64_t KernelPortTTB0L1[TTB0_L1_COUNT][ENTRY_COUNT] TBL_ALIGN;
+static uint64_t PortTTB0L1[TTB0_L1_COUNT][ENTRY_COUNT] TBL_ALIGN;
 
 /*****************************************************************************
- *                    KernelPortSerialInitialize()
+ *                         PortSetupTTB0()
  ****************************************************************************/
 
-void KernelPortSerialInitialize (void)
-{
-  /* Do nothing. */
-}
-
-/*****************************************************************************
- *                      KernelPortSerialPut()
- ****************************************************************************/
-
-void KernelPortSerialPut (char c)
-{
-  /* Put 'c' parameter in the TX buffer. */
-  UARTDR = c;
-
-  /* Wait until 'c' is dispatched. */
-  while (!(UARTFR & TXFE));
-}
-
-/*****************************************************************************
- *                      KernelPortSerialGet()
- ****************************************************************************/
-
-char KernelPortSerialGet (void)
-{
-  /* Wait until FIFO queue is not empty. */
-  while (UARTFR & RXFE);
-
-  /* Read character from FIFO. */
-  return (char) UARTDR;
-}
-
-/*****************************************************************************
- *                         KernelPortSetupTTB0()
- ****************************************************************************/
-
-static void KernelPortSetupTTB0 (void)
+static void PortSetupTTB0 (void)
 {
   /* Descriptors as integers. */
   uint64_t     invalidEntryValue = 0;
@@ -459,7 +365,7 @@ static void KernelPortSetupTTB0 (void)
   blockEntry->IGNORED   = 0;
 
   /* Obtain L0 table. */
-  L0Table = KernelPortTTB0;
+  L0Table = PortTTB0;
 
   /* Loop over every gigabyte we want to setup. */
   do
@@ -471,7 +377,7 @@ static void KernelPortSetupTTB0 (void)
     if (curL1Idx == 0)
     {
       /* Allocate a new L1 table: */
-      L1Table = KernelPortTTB0L1[curL0Idx];
+      L1Table = PortTTB0L1[curL0Idx];
 
       /* Initialize corresponding entry in L0 Table: */
       tableEntry->ADDR  = TO_TBL_ADDR(L1Table);
@@ -506,14 +412,14 @@ static void KernelPortSetupTTB0 (void)
   }
 
   /* Print table information. */
-  KernelPrintFmt("TTB0 TABLE: %x\n", KernelPortTTB0);
+  KernelPrintFmt("TTB0 TABLE: %x\n", PortTTB0);
 }
 
 /*****************************************************************************
- *                         KernelPortSetupTTB1()
+ *                           PortSetupTTB1()
  ****************************************************************************/
 
-static void KernelPortSetupTTB1 (void)
+static void PortSetupTTB1 (void)
 {
   /* Descriptors as integers. */
   uint64_t     invalidEntryValue = 0;
@@ -535,7 +441,7 @@ static void KernelPortSetupTTB1 (void)
   invalidEntry->IGNORED = 0;
 
   /* Obtain L0 table. */
-  L0Table = KernelPortTTB1;
+  L0Table = PortTTB1;
 
   /* Initialize main page table entries. */
   for (curL0Idx = 0; curL0Idx < ENTRY_COUNT; curL0Idx++)
@@ -544,14 +450,14 @@ static void KernelPortSetupTTB1 (void)
   }
 
   /* Print table information. */
-  KernelPrintFmt("TTB1 TABLE: %x\n", KernelPortTTB1);
+  KernelPrintFmt("TTB1 TABLE: %x\n", PortTTB1);
 }
 
 /*****************************************************************************
- *                         KernelPortSetupTTBR0()
+ *                          PortSetupTTBR0()
  ****************************************************************************/
 
-static void KernelPortSetupTTBR0 (void)
+static void PortSetupTTBR0 (void)
 {
   /* Register as integer & struct. */
   uint64_t ttbr0Value   = 0;
@@ -568,7 +474,7 @@ static void KernelPortSetupTTBR0 (void)
 
   /* Initialize new value. */
   ttbr0Ptr->RESV = 0;
-  ttbr0Ptr->ADDR = TO_TTB_ADDR(KernelPortTTB0);
+  ttbr0Ptr->ADDR = TO_TTB_ADDR(PortTTB0);
   ttbr0Ptr->ASID = 0;
 
   /* Print new value in hex. */
@@ -582,10 +488,10 @@ static void KernelPortSetupTTBR0 (void)
 }
 
 /*****************************************************************************
- *                         KernelPortSetupTTBR1()
+ *                           PortSetupTTBR1()
  ****************************************************************************/
 
-static void KernelPortSetupTTBR1 (void)
+static void PortSetupTTBR1 (void)
 {
   /* Register as integer & struct. */
   uint64_t ttbr1Value   = 0;
@@ -602,7 +508,7 @@ static void KernelPortSetupTTBR1 (void)
 
   /* Initialize new value. */
   ttbr1Ptr->RESV = 0;
-  ttbr1Ptr->ADDR = TO_TTB_ADDR(KernelPortTTB1);
+  ttbr1Ptr->ADDR = TO_TTB_ADDR(PortTTB1);
   ttbr1Ptr->ASID = 0;
 
   /* Print new value in hex. */
@@ -616,10 +522,10 @@ static void KernelPortSetupTTBR1 (void)
 }
 
 /*****************************************************************************
- *                          KernelPortSetupTCR()
+ *                            PortSetupTCR()
  ****************************************************************************/
 
-static void KernelPortSetupTCR (void)
+static void PortSetupTCR (void)
 {
   /* Register as integer & struct. */
   uint64_t tcrValue     = 0;
@@ -666,10 +572,10 @@ static void KernelPortSetupTCR (void)
 }
 
 /*****************************************************************************
- *                        KernelPortSetupSCTLRPre()
+ *                         PortSetupSCTLRPre()
  ****************************************************************************/
 
-static void KernelPortSetupSCTLRPre (void)
+static void PortSetupSCTLRPre (void)
 {
   /* Register as integer & struct. */
   uint64_t sctlrValue   = 0;
@@ -706,10 +612,10 @@ static void KernelPortSetupSCTLRPre (void)
 }
 
 /*****************************************************************************
- *                        KernelPortSetupSCTLRPost()
+ *                         PortSetupSCTLRPost()
  ****************************************************************************/
 
-static void KernelPortSetupSCTLRPost (void)
+static void PortSetupSCTLRPost (void)
 {
   /* Register as integer & struct. */
   uint64_t sctlrValue   = 0;
@@ -746,28 +652,28 @@ static void KernelPortSetupSCTLRPost (void)
 }
 
 /*****************************************************************************
- *                  KernelPortTranslationInitialize()
+ *                      PortTranslationInitialize()
  ****************************************************************************/
 
-void KernelPortTranslationInitialize (void)
+void PortTranslationInitialize (void)
 {
   /* Allocate TTB0 and TTB1 tables. */
-  KernelPortSetupTTB0();
-  KernelPortSetupTTB1();
+  PortSetupTTB0();
+  PortSetupTTB1();
 
   /* Setup system registers. */
-  KernelPortSetupSCTLRPre();
-  KernelPortSetupTTBR0();
-  KernelPortSetupTTBR1();
-  KernelPortSetupTCR();
-  KernelPortSetupSCTLRPost();
+  PortSetupSCTLRPre();
+  PortSetupTTBR0();
+  PortSetupTTBR1();
+  PortSetupTCR();
+  PortSetupSCTLRPost();
 }
 
 /*****************************************************************************
- *                     KernelPortTranslationSet()
+ *                        PortTranslationSet()
  ****************************************************************************/
 
-void *KernelPortTranslationSet (void *virtualAddr, void *physicalAddr)
+void *PortTranslationSet (void *virtualAddr, void *physicalAddr)
 {
   /* Descriptors as integers. */
   uint64_t    invalidEntryValue   = 0;
@@ -809,8 +715,8 @@ void *KernelPortTranslationSet (void *virtualAddr, void *physicalAddr)
   invalidEntry->VALID   = IS_INVALID;
   invalidEntry->IGNORED = 0;
 
-  /* Start from L0Table (KernelPortTTB1). */
-  L0Table = KernelPortTTB1;
+  /* Start from L0Table (PortTTB1). */
+  L0Table = PortTTB1;
 
   /* Read current descriptor at L0Table[L0EntryNo]. */
   tableEntryValue = L0Table[L0EntryNo];
@@ -990,10 +896,10 @@ void *KernelPortTranslationSet (void *virtualAddr, void *physicalAddr)
 }
 
 /*****************************************************************************
- *                      KernelPortTranslationGet()
+ *                          PortTranslationGet()
  ****************************************************************************/
 
-void *KernelPortTranslationGet (void *virtualAddr)
+void *PortTranslationGet (void *virtualAddr)
 {
   /* Descriptors as integers. */
   uint64_t    tableEntryValue   = 0;
@@ -1028,8 +934,8 @@ void *KernelPortTranslationGet (void *virtualAddr)
   L1EntryNo = (((uint64_t) virtualAddr) >> 30) & 0x1FF;
   L0EntryNo = (((uint64_t) virtualAddr) >> 39) & 0x1FF;
 
-  /* Start from L0Table (KernelPortTTB1). */
-  L0Table = KernelPortTTB1;
+  /* Start from L0Table (PortTTB1). */
+  L0Table = PortTTB1;
 
   /* Read current descriptor at L0Table[L0EntryNo]. */
   tableEntryValue = L0Table[L0EntryNo];
@@ -1088,10 +994,10 @@ void *KernelPortTranslationGet (void *virtualAddr)
 }
 
 /*****************************************************************************
- *                      KernelPortTranslationDel()
+ *                          PortTranslationDel()
  ****************************************************************************/
 
-void *KernelPortTranslationDel (void *virtualAddr)
+void *PortTranslationDel (void *virtualAddr)
 {
   /* Descriptors as integers. */
   uint64_t    invalidEntryValue = 0;
@@ -1133,8 +1039,8 @@ void *KernelPortTranslationDel (void *virtualAddr)
   invalidEntry->VALID   = IS_INVALID;
   invalidEntry->IGNORED = 0;
 
-  /* Start from L0Table (KernelPortTTB1). */
-  L0Table = KernelPortTTB1;
+  /* Start from L0Table (PortTTB1). */
+  L0Table = PortTTB1;
 
   /* Read current descriptor at L0Table[L0EntryNo]. */
   tableEntryValue = L0Table[L0EntryNo];

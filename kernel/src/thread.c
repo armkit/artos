@@ -149,6 +149,9 @@ thread_t *KernelThreadAllocate (uint64_t threadCpu,
   thread->nextFreeThread  = NULL;
   thread->nextReadyThread = NULL;
 
+  /* Finalize the allocation process at the port. */
+  PortThreadAllocate(thread->threadId);
+
   /* Done. */
   return thread;
 }
@@ -162,6 +165,9 @@ void KernelThreadDeallocate (thread_t *thread)
   /* Free up the thread. */
   thread->isUsed         = 0;
   thread->nextFreeThread = NULL;
+
+  /* Finalize the deallocation process at the port. */
+  PortThreadDeallocate(thread->threadId);
 
   /* Insert into the free thread list. */
   KernelThreadFreeTail->nextFreeThread = thread;

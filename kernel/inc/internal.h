@@ -68,39 +68,28 @@ typedef struct thread
  *                          FUNCTION PROTOTYPES
  ****************************************************************************/
 
-/* CPU-Specific Serial I/O. */
-void KernelPortSerialInitialize(void);
-void KernelPortSerialPut(char c);
-char KernelPortSerialGet(void);
-
-/* CPU-Specific Address Translation. */
-void  KernelPortTranslationInitialize(void);
-void *KernelPortTranslationSet(void *virtualAddr, void *physicalAddr);
-void *KernelPortTranslationGet(void *virtualAddr);
-void *KernelPortTranslationDel(void *virtualAddr);
-
 /* Memory module. */
-void     KernelMemoryInitialize(void);
-void    *KernelMemoryPageAllocate(void);
-void     KernelMemoryPageDeallocate(void *pageBaseAddr);
+void        KernelMemoryInitialize     (void);
+void       *KernelMemoryPageAllocate   (void);
+void        KernelMemoryPageDeallocate (void *pageBaseAddr);
 
 /* Process module. */
-void       KernelProcessInitialize(void);
-process_t *KernelProcessAllocate(void);
-void       KernelProcessDeallocate(process_t *process);
-process_t *KernelProcessGet(uint64_t processId);
+void        KernelProcessInitialize    (void);
+process_t  *KernelProcessAllocate      (void);
+void        KernelProcessDeallocate    (process_t *process);
+process_t  *KernelProcessGet           (uint64_t processId);
 
 /* Thread module. */
-void      KernelThreadInitialize(void);
-thread_t *KernelThreadAllocate(uint64_t threadCpu,
-                               uint64_t threadPriority);
-void      KernelThreadDeallocate(thread_t *thread);
-thread_t *KernelThreadGet(uint64_t threadId);
-void      KernelThreadAdmit(thread_t *thread);
-thread_t *KernelThreadDispatch(uint64_t threadCpu,
-                               uint64_t threadPriority);
-void      KernelThreadRun(uint64_t threadId);
-uint64_t  KernelThreadPause(void);
+void        KernelThreadInitialize     (void);
+thread_t   *KernelThreadAllocate       (uint64_t threadCpu,
+                                        uint64_t threadPriority);
+void        KernelThreadDeallocate     (thread_t *thread);
+thread_t   *KernelThreadGet            (uint64_t threadId);
+void        KernelThreadAdmit          (thread_t *thread);
+thread_t   *KernelThreadDispatch       (uint64_t threadCpu,
+                                        uint64_t threadPriority);
+void        KernelThreadRun            (uint64_t threadId);
+uint64_t    KernelThreadPause          (void);
 
 /*****************************************************************************
  *                            END OF HEADER

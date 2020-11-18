@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/core.c
- * @brief  ARTOS kernel core module.
+ * @file   port/inc/internal.h
+ * @brief  Port internal header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,40 +26,21 @@
  ****************************************************************************/
 
 /*****************************************************************************
+ *                             SAFE GUARD
+ ****************************************************************************/
+
+#ifndef PORT_INTERNAL_H
+#define PORT_INTERNAL_H
+
+/*****************************************************************************
  *                              INCLUDES
  ****************************************************************************/
 
-/* Kernel includes. */
-#include "kernel/inc/interface.h"
-#include "kernel/inc/internal.h"
-
-/* Port includes. */
+/* Port interface header. */
 #include "port/inc/interface.h"
 
 /*****************************************************************************
- *                       KernelCoreInitialize()
+ *                            END OF HEADER
  ****************************************************************************/
 
-void KernelCoreInitialize(void)
-{
-  /* Initialize CPU-specific port. */
-  PortSerialInitialize();
-  PortTranslationInitialize();
-
-  /* Initialize kernel components. */
-  KernelPrintInitialize();
-  KernelMemoryInitialize();
-  KernelProcessInitialize();
-  KernelThreadInitialize();
-  KernelPowerInitialize();
-}
-
-/*****************************************************************************
- *                         KernelCoreStart()
- ****************************************************************************/
-
-void KernelCoreStart(void)
-{
-  /* Just shutdown for now. */
-  KernelPowerOff();
-}
+#endif /* PORT_INTERNAL_H */

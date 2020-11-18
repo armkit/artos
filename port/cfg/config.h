@@ -4,8 +4,8 @@
  *                 Copyright (C) 2020  ARMKit.
  *
  ***************************************************************************
- * @file   kernel/src/core.c
- * @brief  ARTOS kernel core module.
+ * @file   port/cfg/config.h
+ * @brief  Port config header file.
  ***************************************************************************
  *
  * This program is free software; you can redistribute it and/or
@@ -26,40 +26,18 @@
  ****************************************************************************/
 
 /*****************************************************************************
- *                              INCLUDES
+ *                             SAFE GUARD
  ****************************************************************************/
 
-/* Kernel includes. */
-#include "kernel/inc/interface.h"
-#include "kernel/inc/internal.h"
-
-/* Port includes. */
-#include "port/inc/interface.h"
+#ifndef PORT_CONFIG_H
+#define PORT_CONFIG_H
 
 /*****************************************************************************
- *                       KernelCoreInitialize()
+ *                              DEFINES
  ****************************************************************************/
-
-void KernelCoreInitialize(void)
-{
-  /* Initialize CPU-specific port. */
-  PortSerialInitialize();
-  PortTranslationInitialize();
-
-  /* Initialize kernel components. */
-  KernelPrintInitialize();
-  KernelMemoryInitialize();
-  KernelProcessInitialize();
-  KernelThreadInitialize();
-  KernelPowerInitialize();
-}
 
 /*****************************************************************************
- *                         KernelCoreStart()
+ *                            END OF HEADER
  ****************************************************************************/
 
-void KernelCoreStart(void)
-{
-  /* Just shutdown for now. */
-  KernelPowerOff();
-}
+#endif /* PORT_CONFIG_H */

@@ -33,6 +33,9 @@
 #include "kernel/inc/interface.h"
 #include "kernel/inc/internal.h"
 
+/* Port includes. */
+#include "port/inc/interface.h"
+
 /*****************************************************************************
  *                       KernelPrintInitialize()
  ****************************************************************************/
@@ -49,7 +52,7 @@ void KernelPrintInitialize(void)
 void KernelPrintChr(char chr)
 {
   /* Print character using CPU-specific UART driver. */
-  KernelPortSerialPut(chr);
+  PortSerialPut(chr);
 }
 
 /*****************************************************************************
