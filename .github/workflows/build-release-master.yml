@@ -62,7 +62,7 @@ jobs:
       run: docker run -v `pwd`:/wd -t docker.pkg.github.com/armkit/artos/artos:latest sh -c 'cp /artos/build/${{ matrix.sys }}/*.${{ matrix.fmt }} /wd'
 
     - name: Get artifact name
-      run: echo '::set-env name=FILE_NAME::'`ls *.${{ matrix.fmt }}`
+      run: echo 'FILE_NAME='`ls *.${{ matrix.fmt }}` >> $GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
