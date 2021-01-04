@@ -60,6 +60,9 @@ void KernelCoreInitialize(void)
 
 void KernelCoreStart(void)
 {
+  /* Start scheduler. */
+  KernelThreadScheduler();
+
   /* Just shutdown for now. */
   KernelPowerOff();
 }
